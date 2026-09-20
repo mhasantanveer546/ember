@@ -1,0 +1,4 @@
+# The search engine is meant to stand alone, testable without FastAPI/DB.
+# Kept dependency-light on purpose.
+
+pytest

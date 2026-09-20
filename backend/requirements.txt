@@ -1,0 +1,6 @@
+# Backend dependencies — populated as each phase needs them.
+# Phase 0: nothing yet beyond tooling below.
+# Phase 2 will add: fastapi, uvicorn, sqlalchemy, alembic, psycopg2-binary,
+#   python-jose (or pyjwt), passlib[bcrypt], pydantic-settings, rq, redis
+
+pytest
