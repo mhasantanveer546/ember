@@ -43,3 +43,26 @@ def test_determinism():
 
 def test_unicode_letters():
     assert tokenize("café résumé") == ["café", "résumé"]
+
+def test_tokenize_with_offsets_basic():
+    from search_engine.tokenizer import tokenize_with_offsets
+    result = tokenize_with_offsets("The Quick Fox")
+    assert result == [("the", 0, 3), ("quick", 4, 9), ("fox", 10, 13)]
+
+
+def test_tokenize_with_offsets_matches_original_text_slices():
+    from search_engine.tokenizer import tokenize_with_offsets
+    text = "Congestion Control in TCP"
+    for token, start, end in tokenize_with_offsets(text):
+        assert text[start:end].lower() == token
+
+
+def test_tokenize_with_offsets_empty_string():
+    from search_engine.tokenizer import tokenize_with_offsets
+    assert tokenize_with_offsets("") == []
+
+
+def test_tokenize_with_offsets_punctuation_excluded_from_spans():
+    from search_engine.tokenizer import tokenize_with_offsets
+    result = tokenize_with_offsets("Hello, world!")
+    assert result == [("hello", 0, 5), ("world", 7, 12)]

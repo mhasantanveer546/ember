@@ -62,3 +62,29 @@ def tokenize(text: str) -> list[str]:
     # tokens with a single, simple pass.
     lowered = text.lower()
     return _TOKEN_PATTERN.findall(lowered)
+
+
+def tokenize_with_offsets(text: str) -> list[tuple[str, int, int]]:
+    """
+    Like tokenize(), but also returns each token's character offsets in
+    the ORIGINAL (non-lowercased) text: (lowercase_token, start, end).
+
+    This exists specifically for snippet generation (snippets.py), which
+    needs to slice out and highlight exact substrings of the original
+    document text — something the plain token list alone can't do, since
+    it discards position information.
+
+    Examples:
+        >>> tokenize_with_offsets("The Quick Fox")
+        [('the', 0, 3), ('quick', 4, 9), ('fox', 10, 13)]
+    """
+    if not text:
+        return []
+
+    # Match against the original text's lowercase form so offsets line up
+    # with `text` itself (lowercasing doesn't change string length for the
+    # ASCII/most-Unicode case, and re.finditer positions refer to whatever
+    # string we call it on — so we match on `text.lower()` but the offsets
+    # are equally valid on `text` since case-folding preserves length here).
+    lowered = text.lower()
+    return [(m.group(), m.start(), m.end()) for m in _TOKEN_PATTERN.finditer(lowered)]
