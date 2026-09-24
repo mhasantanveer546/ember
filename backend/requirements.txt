@@ -10,5 +10,12 @@ pydantic-settings
 python-dotenv
 httpx  # needed by FastAPI's TestClient
 
+# --- Phase 2.2: authentication ---
+bcrypt
+pyjwt
+pydantic[email]
+redis
+
 # --- Testing ---
 pytest
+fakeredis

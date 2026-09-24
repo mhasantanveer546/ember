@@ -25,12 +25,6 @@ from app.models import (
 )
 
 
-@pytest.fixture(autouse=True)
-def _fresh_schema():
-    Base.metadata.create_all(engine)
-    yield
-    Base.metadata.drop_all(engine)
-
 
 @pytest.fixture
 def db():

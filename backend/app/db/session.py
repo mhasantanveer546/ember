@@ -11,10 +11,36 @@ from collections.abc import Generator
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+# SQLite-specific engine configuration. Two separate gotchas here, both
+# ONLY relevant to SQLite (Neon/Postgres is unaffected — production
+# never takes this branch):
+#
+#   1. check_same_thread=False: SQLite by default only allows a
+#      connection to be used from the thread that created it. FastAPI's
+#      TestClient may call route functions from a different thread than
+#      the one that set up the engine, so this needs to be relaxed for
+#      tests to work at all.
+#
+#   2. poolclass=StaticPool for ":memory:" specifically: an in-memory
+#      SQLite database exists ONLY within a single connection — a new
+#      connection gets a completely separate, empty database. Without
+#      forcing the whole engine onto a single shared connection
+#      (StaticPool), tables created via one connection would be
+#      invisible to the next, causing confusing "no such table" errors
+#      that only manifest under the test suite.
+_connect_args: dict = {}
+_engine_kwargs: dict = {"pool_pre_ping": True}
+
+if settings.database_url.startswith("sqlite"):
+    _connect_args["check_same_thread"] = False
+    if ":memory:" in settings.database_url:
+        _engine_kwargs["poolclass"] = StaticPool
+
+engine = create_engine(settings.database_url, connect_args=_connect_args, **_engine_kwargs)
 
 
 @event.listens_for(engine, "connect")
@@ -34,10 +60,6 @@ def _enable_sqlite_foreign_keys(dbapi_connection, connection_record) -> None:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
-
-# pool_pre_ping=True: checks each connection is still alive before use.
-# Matters especially for Neon, which may close idle connections — without
-# this, the first query on a stale connection would fail outright.
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
