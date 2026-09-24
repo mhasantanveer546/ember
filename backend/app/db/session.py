@@ -9,12 +9,31 @@ regardless of whether the request succeeded or raised.
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import settings
 
 engine = create_engine(settings.database_url, pool_pre_ping=True)
+
+
+@event.listens_for(engine, "connect")
+def _enable_sqlite_foreign_keys(dbapi_connection, connection_record) -> None:
+    """
+    SQLite does NOT enforce foreign key constraints by default, unlike
+    Postgres — ON DELETE CASCADE / SET NULL declared in our models would
+    silently be a no-op at the database level on SQLite otherwise. This
+    only matters for the test suite (which uses SQLite); real Neon
+    Postgres already enforces these correctly without any extra step.
+    Without this, cascade-delete tests could pass for the wrong reason
+    (relying only on SQLAlchemy's in-Python ORM-level cascade logic,
+    which wouldn't catch a mistake in the actual FK constraint itself).
+    """
+    if settings.database_url.startswith("sqlite"):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
 
 # pool_pre_ping=True: checks each connection is still alive before use.
 # Matters especially for Neon, which may close idle connections — without
