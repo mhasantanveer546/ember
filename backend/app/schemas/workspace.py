@@ -15,6 +15,10 @@ class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
 
 
+class WorkspaceUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+
+
 class WorkspaceResponse(BaseModel):
     model_config = {"from_attributes": True}
 

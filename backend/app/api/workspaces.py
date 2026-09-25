@@ -1,19 +1,17 @@
 """
-Ember Backend — Workspace Routes (minimal, Phase 2.3)
+Ember Backend — Workspace Routes
 
-Only create + get-one for now, deliberately minimal — just enough
-surface area to prove the ownership pattern (get_owned_workspace) works
-end-to-end via real HTTP requests. Full CRUD, folders, and browsing
-arrive in Phase 2.4.
+Full CRUD: create, list (current user's own), get-one, update (rename),
+delete (cascades to folders/documents/index_metadata per Phase 2.1).
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_owned_workspace
 from app.db.session import get_db
 from app.models import IndexMetadata, User, Workspace
-from app.schemas.workspace import WorkspaceCreate, WorkspaceResponse
+from app.schemas.workspace import WorkspaceCreate, WorkspaceResponse, WorkspaceUpdate
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -38,6 +36,48 @@ def create_workspace(
     return workspace
 
 
+@router.get("", response_model=list[WorkspaceResponse])
+def list_workspaces(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[Workspace]:
+    return (
+        db.query(Workspace)
+        .filter(Workspace.owner_id == current_user.id)
+        .order_by(Workspace.created_at.desc())
+        .all()
+    )
+
+
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 def get_workspace(workspace: Workspace = Depends(get_owned_workspace)) -> Workspace:
     return workspace
+
+
+@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
+def update_workspace(
+    payload: WorkspaceUpdate,
+    workspace: Workspace = Depends(get_owned_workspace),
+    db: Session = Depends(get_db),
+) -> Workspace:
+    # exclude_unset=True: only fields the client actually sent are
+    # applied — a PATCH with an empty body changes nothing, rather than
+    # resetting fields to their schema defaults.
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(workspace, field, value)
+
+    db.commit()
+    db.refresh(workspace)
+    return workspace
+
+
+@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_workspace(
+    workspace: Workspace = Depends(get_owned_workspace),
+    db: Session = Depends(get_db),
+) -> None:
+    # Cascades to folders, documents, and index_metadata per the
+    # ondelete="CASCADE" constraints defined in Phase 2.1's models.
+    db.delete(workspace)
+    db.commit()

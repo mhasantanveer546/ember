@@ -23,7 +23,7 @@ from app.core import security
 from app.core.denylist import is_denylisted
 from app.core.redis_client import get_redis_client
 from app.db.session import get_db
-from app.models import Document, User, Workspace
+from app.models import Document, Folder, User, Workspace
 
 # tokenUrl is only used to populate the /docs "Authorize" button correctly;
 # it doesn't affect how tokens are actually validated here.
@@ -112,3 +112,28 @@ def get_owned_document(
         raise not_found
 
     return document
+
+def get_owned_folder(
+    folder_id: uuid.UUID,
+    workspace: Workspace = Depends(get_owned_workspace),
+    db: Session = Depends(get_db),
+) -> Folder:
+    """
+    Load a folder AND verify it belongs to the workspace already
+    authorized by get_owned_workspace (which itself verified the current
+    user owns that workspace).
+
+    Checking folder.workspace_id == workspace.id here — not just "does
+    this folder exist" — matters: without it, a URL like
+    /workspaces/{MY_workspace}/folders/{SOMEONE_ELSES_folder_id} could
+    return a folder from a workspace the user doesn't own, as long as
+    the folder ID itself was guessable/known, even though the workspace
+    in the URL is legitimately theirs.
+    """
+    not_found = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+
+    folder = db.get(Folder, folder_id)
+    if folder is None or folder.workspace_id != workspace.id:
+        raise not_found
+
+    return folder
