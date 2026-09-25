@@ -16,6 +16,11 @@ pyjwt
 pydantic[email]
 redis
 
+# --- Phase 3: document pipeline ---
+pypdf
+python-docx
+
 # --- Testing ---
 pytest
 fakeredis
+reportlab  # generates real PDF fixtures for extraction tests
