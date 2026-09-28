@@ -169,13 +169,11 @@ def test_get_owned_document_allows_workspace_owner(client):
     me_response = client.get("/auth/me", headers=_auth_headers(token))
     owner_id = uuid.UUID(me_response.json()["id"])
 
-    _workspace_id, document_id = _make_workspace_with_document(owner_id)
+    workspace_id, document_id = _make_workspace_with_document(owner_id)
 
     db = SessionLocal()
-    from app.models import User
-
-    owner_user = db.get(User, owner_id)
-    result = get_owned_document(document_id=document_id, current_user=owner_user, db=db)
+    workspace = db.get(Workspace, workspace_id)
+    result = get_owned_document(document_id=document_id, workspace=workspace, db=db)
     db.close()
 
     assert result.id == document_id
@@ -185,22 +183,26 @@ def test_get_owned_document_denies_non_owner(client):
     from fastapi import HTTPException
 
     from app.api.deps import get_owned_document
-    from app.models import User
 
     owner_token = _register_and_login(client, "owner@example.com")
     owner_me = client.get("/auth/me", headers=_auth_headers(owner_token))
     owner_id = uuid.UUID(owner_me.json()["id"])
-    _workspace_id, document_id = _make_workspace_with_document(owner_id)
+    workspace_id, document_id = _make_workspace_with_document(owner_id)
 
+    # A SECOND workspace, owned by the attacker — simulating what
+    # get_owned_workspace would have already resolved for a URL like
+    # /workspaces/{attacker_workspace}/documents/{owner's document_id}.
     attacker_token = _register_and_login(client, "attacker@example.com")
     attacker_me = client.get("/auth/me", headers=_auth_headers(attacker_token))
     attacker_id = uuid.UUID(attacker_me.json()["id"])
 
     db = SessionLocal()
-    attacker_user = db.get(User, attacker_id)
+    attacker_workspace = Workspace(owner_id=attacker_id, name="Attacker's workspace")
+    db.add(attacker_workspace)
+    db.commit()
 
     try:
-        get_owned_document(document_id=document_id, current_user=attacker_user, db=db)
+        get_owned_document(document_id=document_id, workspace=attacker_workspace, db=db)
         assert False, "expected HTTPException(404)"
     except HTTPException as exc:
         assert exc.status_code == 404

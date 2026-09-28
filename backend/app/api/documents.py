@@ -1,0 +1,96 @@
+"""
+Ember Backend — Document Routes (Phase 3.5)
+
+POST /workspaces/{workspace_id}/documents does only the FAST work:
+validate, hash, check duplicate, save raw bytes, create the DB row,
+enqueue the background job. Everything slow (extraction, tokenization,
+indexing) happens in the worker (workers/document_processing.py),
+entirely outside this request/response cycle.
+"""
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from rq import Queue
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_owned_document, get_owned_workspace
+from app.core.queue import get_queue
+from app.db.session import get_db
+from app.models import Document, DocumentStatus, Workspace
+from app.schemas.document import DocumentResponse, DocumentUploadResponse
+from app.services.duplicate_detection import find_duplicate_document
+from app.services.file_validation import FileValidationError, validate_upload
+from app.services.hashing import compute_content_hash
+from app.services.storage.local_storage import get_storage_service
+from app.workers.document_processing import process_document
+
+router = APIRouter(prefix="/workspaces/{workspace_id}/documents", tags=["documents"])
+
+
+@router.post("", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
+async def upload_document(
+    file: UploadFile = File(...),
+    workspace: Workspace = Depends(get_owned_workspace),
+    db: Session = Depends(get_db),
+    queue: Queue = Depends(get_queue),
+) -> DocumentUploadResponse:
+    content = await file.read()
+
+    try:
+        file_kind = validate_upload(file.filename, content)
+    except FileValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    content_hash = compute_content_hash(content)
+
+    existing_document = find_duplicate_document(db, workspace.id, content_hash)
+    if existing_document is not None:
+        return DocumentUploadResponse(document=existing_document, is_duplicate=True)
+
+    document = Document(
+        workspace_id=workspace.id,
+        owner_id=workspace.owner_id,
+        filename=file.filename,
+        storage_key="",  # filled in below, once the document's own ID is known
+        content_hash=content_hash,
+        mime_type=file.content_type or "application/octet-stream",
+        file_size_bytes=len(content),
+        status=DocumentStatus.UPLOADING,
+    )
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+
+    storage_key = f"workspaces/{workspace.id}/documents/{document.id}/original.{file_kind}"
+    document.storage_key = storage_key
+    db.commit()
+    db.refresh(document)
+
+    storage = get_storage_service()
+    storage.save(storage_key, content)
+
+    # Fast path ends here — everything else happens in the worker.
+    queue.enqueue(process_document, str(document.id))
+
+    # Refresh from the database before responding. In production, with a
+    # real async worker, this is a no-op most of the time (the worker
+    # hasn't started yet) — the response legitimately shows UPLOADING.
+    # But with the synchronous test queue (conftest.py), the job has
+    # ALREADY run by the time enqueue() returns, in a SEPARATE db
+    # session — so without this refresh, the response would show the
+    # stale in-memory status from before processing, even though the
+    # database row itself was already updated to READY/FAILED.
+    db.refresh(document)
+
+    return DocumentUploadResponse(document=document, is_duplicate=False)
+
+
+@router.get("/{document_id}", response_model=DocumentResponse)
+def get_document(document: Document = Depends(get_owned_document)) -> Document:
+    return document
+
+
+@router.get("", response_model=list[DocumentResponse])
+def list_documents(
+    workspace: Workspace = Depends(get_owned_workspace), db: Session = Depends(get_db)
+) -> list[Document]:
+    return db.query(Document).filter(Document.workspace_id == workspace.id).all()

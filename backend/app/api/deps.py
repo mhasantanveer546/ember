@@ -88,27 +88,27 @@ def get_owned_workspace(
 
 def get_owned_document(
     document_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_owned_workspace),
     db: Session = Depends(get_db),
 ) -> Document:
     """
-    Load a document AND verify the current user has access to it.
+    Load a document AND verify it belongs to the workspace already
+    authorized by get_owned_workspace, matching the same URL-consistency
+    pattern as get_owned_folder below.
 
-    Deliberately checks WORKSPACE ownership (document.workspace.owner_id),
-    not document.owner_id (who uploaded it). document.owner_id is
-    attribution — useful for "uploaded by" display — while access control
-    belongs at the workspace level, since a future shared-workspace
-    feature would give multiple users legitimate access to documents
-    none of them personally uploaded. Checking owner_id here would need
-    to be revisited the moment sharing exists; checking workspace
-    ownership doesn't.
+    Originally this checked document.workspace.owner_id directly against
+    current_user, without confirming the workspace_id in the URL matched
+    the document's actual workspace — the same class of gap Phase 2.4
+    fixed for folders (a URL like /workspaces/{MY_workspace}/documents/
+    {SOMEONE_ELSES_document_id} could return a document from a
+    DIFFERENT workspace the user owns, since only document-level
+    ownership was checked, not URL/document consistency). Fixed here the
+    same way: depend on get_owned_workspace and compare workspace_id.
     """
     not_found = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
     document = db.get(Document, document_id)
-    if document is None:
-        raise not_found
-    if document.workspace.owner_id != current_user.id:
+    if document is None or document.workspace_id != workspace.id:
         raise not_found
 
     return document

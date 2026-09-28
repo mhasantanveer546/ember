@@ -19,6 +19,8 @@ redis
 # --- Phase 3: document pipeline ---
 pypdf
 python-docx
+rq
+python-multipart  # required by FastAPI for file upload (UploadFile) support
 
 # --- Testing ---
 pytest
