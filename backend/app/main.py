@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import router as auth_router
 from app.api.documents import router as documents_router
 from app.api.folders import router as folders_router
+from app.api.search import router as search_router
 from app.api.workspaces import router as workspaces_router
 from app.db.session import get_db
 
@@ -23,6 +24,7 @@ app.include_router(auth_router)
 app.include_router(workspaces_router)
 app.include_router(folders_router)
 app.include_router(documents_router)
+app.include_router(search_router)
 
 
 @app.get("/health")

@@ -20,6 +20,7 @@ from app.services.extraction.extraction_service import extract_text
 from app.services.search.index_registry import get_or_create_workspace_index
 from app.services.storage.local_storage import get_storage_service
 from search_engine.tokenizer import tokenize
+from app.services.search.trie_registry import get_or_create_workspace_trie
 
 
 def process_document(document_id: str) -> None:
@@ -57,6 +58,13 @@ def process_document(document_id: str) -> None:
             tokens = tokenize(text)
             workspace_index = get_or_create_workspace_index(document.workspace_id)
             workspace_index.add_document(str(document.id), tokens)
+
+            # Populate autocomplete's Trie with this document's distinct
+            # vocabulary. set() since inserting the same word twice is a
+            # safe no-op anyway (Trie.insert), but no reason to repeat it.
+            workspace_trie = get_or_create_workspace_trie(document.workspace_id)
+            for token in set(tokens):
+                workspace_trie.insert(token)
 
             document.status = DocumentStatus.READY
             db.commit()

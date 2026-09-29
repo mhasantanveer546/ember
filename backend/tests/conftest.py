@@ -43,6 +43,7 @@ from app.db.session import Base, engine
 from app.main import app
 from app.services.search.index_registry import reset_all_indexes
 from app import models as _models  # noqa: F401 — registers all models on Base.metadata
+from app.services.search.trie_registry import reset_all_tries
 
 _fake_redis_client = fakeredis.FakeRedis(decode_responses=True)
 
@@ -72,6 +73,7 @@ def _fresh_schema_and_redis():
     Base.metadata.create_all(engine)
     _fake_redis_client.flushall()
     reset_all_indexes()
+    reset_all_tries()
     yield
     Base.metadata.drop_all(engine)
 
