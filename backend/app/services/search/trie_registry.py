@@ -1,11 +1,10 @@
 """
-Ember Backend — Workspace Trie Registry (Phase 4, MINIMAL PLACEHOLDER)
+Ember Backend — Workspace Trie Registry
 
-Same placeholder status as index_registry.py: purely in-memory, does not
-survive a process restart, would not be shared correctly across worker
-processes. Exists to power autocomplete now; Phase 4.1's real
-persistence design should eventually cover this too, not just the
-InvertedIndex.
+In-memory cache of each workspace's autocomplete Trie. DERIVED data: it
+is rebuilt from Postgres alongside the InvertedIndex (Phase 4.1,
+rebuild_service.rebuild_and_swap / ensure_index_fresh), so losing it on a
+restart or having a stale copy in another process is recoverable.
 """
 
 import uuid

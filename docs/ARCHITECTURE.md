@@ -74,8 +74,11 @@ RQ expects, no virtualization required.
 ## Phase status
 
 - [x] Phase 0 — architecture, repo skeleton
-- [ ] Phase 1 — search engine core (tokenizer, inverted index, trie, TF-IDF)
-- [ ] Phase 2 — backend + database
-- [ ] Phase 3 — document pipeline
-- [ ] Phase 4 — search API
+- [x] Phase 1 — search engine core (tokenizer, inverted index, trie, TF-IDF, ranking, top-K, snippets)
+- [x] Phase 2 — backend + database (schema, auth, authorization, workspaces/folders)
+- [x] Phase 3 — document pipeline (validation, storage, extraction, hashing, RQ worker)
+- [x] Phase 4 — search API (search, autocomplete, history)
+- [x] Phase 4.1 — index persistence: Postgres is source of truth; deterministic
+      rebuild -> validate -> atomic swap; recovery via `ensure_index_fresh`
+- [ ] Phase 4.2 — search performance (1k / 10k documents, <500ms target)
 - [ ] Phase 5+ — web, mobile, cloud, CI/CD, AI/RAG, hardening
