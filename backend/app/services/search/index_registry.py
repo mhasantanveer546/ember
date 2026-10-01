@@ -1,21 +1,14 @@
 """
-Ember Backend — Workspace Index Registry (Phase 3.5, MINIMAL PLACEHOLDER)
+Ember Backend — Workspace Index Registry (Phase 3.5, finalized in Phase 4.1)
 
 Maps workspace_id -> search_engine.InvertedIndex, purely in-memory.
 
-THIS IS EXPLICITLY A PLACEHOLDER, not a production design:
-  - It does NOT survive a process restart — every index is rebuilt from
-    nothing the moment this process exits.
-  - It would NOT be shared correctly across multiple worker processes
-    (each process gets its own separate dict, and thus its own separate,
-    inconsistent view of each workspace's index).
-  - There is no persistence, versioning, or rebuild-and-swap here at all.
-
-This exists ONLY to prove documents flow end-to-end from upload through
-extraction to a genuinely searchable index within Phase 3.5. Phase 4.1
-("Index Persistence") replaces this with a real design: the database as
-source of truth, a deterministic rebuild process, and an atomic swap so
-a search never sees a half-built index.
+In-memory cache of each workspace's InvertedIndex. This is DERIVED data:
+PostgreSQL (documents + stored files) is the source of truth.
+  - Restart / stale copy in another process -> rebuilt on demand by
+    rebuild_service.ensure_index_fresh().
+  - Explicit rebuild -> rebuild_service.rebuild_and_swap() validates the
+    new index first, then swaps it in with swap_workspace_index().
 """
 
 import uuid
@@ -23,6 +16,13 @@ import uuid
 from search_engine.inverted_index import InvertedIndex
 
 _indexes: dict[str, InvertedIndex] = {}
+
+# workspace_id -> number of READY documents in Postgres at the moment this
+# process last loaded (rebuilt) that workspace's index. Used by Phase 4.1's
+# recovery check: if Postgres now has a different READY count, this
+# process's in-memory index is stale (restart, or a document was added by
+# a separate worker process) and must be rebuilt from the source of truth.
+_loaded_ready_counts: dict[str, int] = {}
 
 
 def get_or_create_workspace_index(workspace_id: uuid.UUID) -> InvertedIndex:
@@ -35,6 +35,7 @@ def get_or_create_workspace_index(workspace_id: uuid.UUID) -> InvertedIndex:
 def reset_all_indexes() -> None:
     """Test-only utility: clear all in-memory indexes between test runs."""
     _indexes.clear()
+    _loaded_ready_counts.clear()
 
 def swap_workspace_index(workspace_id: uuid.UUID, new_index: InvertedIndex) -> None:
     """
@@ -45,3 +46,12 @@ def swap_workspace_index(workspace_id: uuid.UUID, new_index: InvertedIndex) -> N
     the complete new one, never a partially-built intermediate state.
     """
     _indexes[str(workspace_id)] = new_index
+
+
+def get_loaded_ready_count(workspace_id: uuid.UUID) -> int | None:
+    """READY-document count at last load, or None if never loaded here."""
+    return _loaded_ready_counts.get(str(workspace_id))
+
+
+def mark_workspace_loaded(workspace_id: uuid.UUID, ready_document_count: int) -> None:
+    _loaded_ready_counts[str(workspace_id)] = ready_document_count

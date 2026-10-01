@@ -16,7 +16,11 @@ from sqlalchemy.orm import Session
 
 from app.models import Document, DocumentStatus, IndexMetadata
 from app.services.search.index_builder import RebuildResult, rebuild_workspace_index
-from app.services.search.index_registry import swap_workspace_index
+from app.services.search.index_registry import (
+    get_loaded_ready_count,
+    mark_workspace_loaded,
+    swap_workspace_index,
+)
 from app.services.search.trie_registry import swap_workspace_trie
 
 
@@ -57,10 +61,42 @@ def rebuild_and_swap(db: Session, workspace_id: uuid.UUID) -> RebuildResult:
 
     swap_workspace_index(workspace_id, result.index)
     swap_workspace_trie(workspace_id, result.trie)
+    mark_workspace_loaded(workspace_id, ready_document_count)
 
     _update_index_metadata(db, workspace_id, result, bump_version=True)
 
     return result
+
+
+def ensure_index_fresh(db: Session, workspace_id: uuid.UUID) -> bool:
+    """
+    Recovery check (Phase 4.1: "recoverable"). Called before serving a
+    search/autocomplete request.
+
+    Compares Postgres's READY-document count with the count this process
+    loaded its in-memory index from. They differ after a process restart
+    (never loaded), after a document is added/removed by another process
+    (e.g. the RQ worker), or after a delete. One cheap COUNT query; the
+    expensive rebuild only runs when the index is actually stale.
+
+    If the rebuild fails validation the previous live index keeps serving
+    (stale is better than down) and False is returned.
+
+    Returns:
+        True if a rebuild was performed and swapped in.
+    """
+    ready_count = (
+        db.query(Document)
+        .filter(Document.workspace_id == workspace_id, Document.status == DocumentStatus.READY)
+        .count()
+    )
+    if get_loaded_ready_count(workspace_id) == ready_count:
+        return False
+    try:
+        rebuild_and_swap(db, workspace_id)
+    except RebuildValidationError:
+        return False
+    return True
 
 
 def record_incremental_index_update(
