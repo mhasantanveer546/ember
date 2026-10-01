@@ -21,7 +21,7 @@ ember/
 
 ## Status
 
-Phases 0–4.1 complete (search engine, backend, document pipeline, search API, index rebuild/recovery). Next: Phase 4.2 performance. See `docs/ARCHITECTURE.md`.
+Phases 0–4.2 complete (search engine, backend, document pipeline, search API, index rebuild/recovery, performance benchmark). Next: Phase 5 web app. See `docs/ARCHITECTURE.md`.
 
 ## Stack decisions
 
