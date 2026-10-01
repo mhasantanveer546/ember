@@ -25,3 +25,7 @@ def get_or_create_workspace_trie(workspace_id: uuid.UUID) -> Trie:
 def reset_all_tries() -> None:
     """Test-only utility: clear all in-memory tries between test runs."""
     _tries.clear()
+
+def swap_workspace_trie(workspace_id: uuid.UUID, new_trie: Trie) -> None:
+    """Atomic swap — same reasoning as swap_workspace_index."""
+    _tries[str(workspace_id)] = new_trie

@@ -39,7 +39,7 @@ from fastapi.testclient import TestClient
 
 from app.core.queue import get_queue
 from app.core.redis_client import get_redis_client
-from app.db.session import Base, engine
+from app.db.session import Base, SessionLocal, engine
 from app.main import app
 from app.services.search.index_registry import reset_all_indexes
 from app import models as _models  # noqa: F401 — registers all models on Base.metadata
@@ -81,3 +81,14 @@ def _fresh_schema_and_redis():
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
+
+@pytest.fixture
+def db_session():
+    """Shared plain-session fixture for tests that need direct DB access
+    alongside the HTTP client (e.g. simulating out-of-band state changes,
+    or calling service-layer functions directly)."""
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()

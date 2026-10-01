@@ -18,9 +18,10 @@ from app.db.session import SessionLocal
 from app.models import Document, DocumentStatus
 from app.services.extraction.extraction_service import extract_text
 from app.services.search.index_registry import get_or_create_workspace_index
+from app.services.search.rebuild_service import record_incremental_index_update
+from app.services.search.trie_registry import get_or_create_workspace_trie
 from app.services.storage.local_storage import get_storage_service
 from search_engine.tokenizer import tokenize
-from app.services.search.trie_registry import get_or_create_workspace_trie
 
 
 def process_document(document_id: str) -> None:
@@ -68,6 +69,15 @@ def process_document(document_id: str) -> None:
 
             document.status = DocumentStatus.READY
             db.commit()
+
+            # Keep IndexMetadata's live stats fresh after every upload,
+            # not just after an explicit full rebuild (Phase 4.1).
+            record_incremental_index_update(
+                db,
+                document.workspace_id,
+                document_count=workspace_index.document_count(),
+                vocabulary_size=workspace_index.vocabulary_size(),
+            )
 
         except Exception:
             # Deliberately broad: ANY failure at any step (storage read,

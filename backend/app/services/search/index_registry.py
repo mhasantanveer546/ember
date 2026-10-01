@@ -35,3 +35,13 @@ def get_or_create_workspace_index(workspace_id: uuid.UUID) -> InvertedIndex:
 def reset_all_indexes() -> None:
     """Test-only utility: clear all in-memory indexes between test runs."""
     _indexes.clear()
+
+def swap_workspace_index(workspace_id: uuid.UUID, new_index: InvertedIndex) -> None:
+    """
+    Atomically replace a workspace's live index with a fully-built new
+    one (Phase 4.1's rebuild-and-swap). A plain dict item assignment is
+    atomic under Python's GIL — any concurrent search reading
+    get_or_create_workspace_index sees either the complete old index or
+    the complete new one, never a partially-built intermediate state.
+    """
+    _indexes[str(workspace_id)] = new_index
