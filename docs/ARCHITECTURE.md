@@ -80,5 +80,5 @@ RQ expects, no virtualization required.
 - [x] Phase 4 — search API (search, autocomplete, history)
 - [x] Phase 4.1 — index persistence: Postgres is source of truth; deterministic
       rebuild -> validate -> atomic swap; recovery via `ensure_index_fresh`
-- [ ] Phase 4.2 — search performance (1k / 10k documents, <500ms target)
+- [x] Phase 4.2 — search performance (1k / 10k docs, P95 < 500ms met; see SEARCH_PERFORMANCE.md)
 - [ ] Phase 5+ — web, mobile, cloud, CI/CD, AI/RAG, hardening
