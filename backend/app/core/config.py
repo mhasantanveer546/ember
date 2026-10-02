@@ -29,6 +29,11 @@ class Settings(BaseSettings):
 
     # --- Redis / RQ ---
     redis_url: str = "redis://localhost:6379/0"
+    # Development convenience: run document-processing jobs immediately,
+    # inside the API process, instead of waiting for a separate worker.
+    # Handy on Windows (RQ's normal worker needs os.fork). Never use in
+    # production: uploads would block until processing finishes.
+    run_jobs_inline: bool = False
 
     # --- Storage ---
     storage_backend: str = "local"

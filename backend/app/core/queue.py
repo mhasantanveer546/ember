@@ -20,4 +20,4 @@ QUEUE_NAME = "documents"
 
 def get_queue() -> Queue:
     connection = redis.Redis.from_url(settings.redis_url)
-    return Queue(QUEUE_NAME, connection=connection)
+    return Queue(QUEUE_NAME, connection=connection, is_async=not settings.run_jobs_inline)

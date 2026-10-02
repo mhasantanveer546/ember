@@ -21,7 +21,7 @@ ember/
 
 ## Status
 
-Phases 0–6 complete (search engine, backend, document pipeline, search API, web app and integration). Next: Phase 7 mobile app. See `docs/ARCHITECTURE.md`.
+Phases 0–6 complete (search engine, backend, document pipeline, search API, web app and integration). Next: Phase 7 mobile app. To run and test everything locally, see `docs/RUNNING.md`.
 
 ## Stack decisions
 
