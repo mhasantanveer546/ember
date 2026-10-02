@@ -25,3 +25,7 @@ class DocumentResponse(BaseModel):
 class DocumentUploadResponse(BaseModel):
     document: DocumentResponse
     is_duplicate: bool
+
+
+class DocumentTextResponse(BaseModel):
+    text: str

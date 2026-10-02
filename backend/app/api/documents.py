@@ -16,8 +16,10 @@ from app.api.deps import get_owned_document, get_owned_workspace
 from app.core.queue import get_queue
 from app.db.session import get_db
 from app.models import Document, DocumentStatus, Workspace
-from app.schemas.document import DocumentResponse, DocumentUploadResponse
+from app.schemas.document import DocumentResponse, DocumentTextResponse, DocumentUploadResponse
 from app.services.duplicate_detection import find_duplicate_document
+from app.services.extraction.extraction_service import extract_text
+from app.services.search.index_registry import get_or_create_workspace_index
 from app.services.file_validation import FileValidationError, validate_upload
 from app.services.hashing import compute_content_hash
 from app.services.storage.local_storage import get_storage_service
@@ -94,3 +96,52 @@ def list_documents(
     workspace: Workspace = Depends(get_owned_workspace), db: Session = Depends(get_db)
 ) -> list[Document]:
     return db.query(Document).filter(Document.workspace_id == workspace.id).all()
+
+
+def _read_document_text(document: Document) -> str:
+    content = get_storage_service().read(document.storage_key)
+    file_kind = document.filename.rsplit(".", 1)[-1].lower()
+    return extract_text(file_kind, content)
+
+
+@router.get("/{document_id}/text", response_model=DocumentTextResponse)
+def get_document_text(document: Document = Depends(get_owned_document)) -> DocumentTextResponse:
+    """Extracted text, for the document preview page (Phase 5.5)."""
+    try:
+        return DocumentTextResponse(text=_read_document_text(document))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Could not extract text from this document.",
+        ) from exc
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document(
+    document: Document = Depends(get_owned_document), db: Session = Depends(get_db)
+) -> None:
+    storage_key = document.storage_key
+    get_or_create_workspace_index(document.workspace_id).remove_document(str(document.id))
+    db.delete(document)
+    db.commit()
+    # Autocomplete's Trie can't remove words; the next search sees the READY
+    # count changed and rebuilds both index and trie (rebuild_service).
+    try:
+        get_storage_service().delete(storage_key)
+    except Exception:
+        pass  # the DB row is the source of truth; an orphaned file is harmless
+
+
+@router.post("/{document_id}/reindex", response_model=DocumentResponse)
+def reindex_document(
+    document: Document = Depends(get_owned_document),
+    db: Session = Depends(get_db),
+    queue: Queue = Depends(get_queue),
+) -> Document:
+    """Re-run extraction + indexing for one document (Phase 5.5 "re-index")."""
+    get_or_create_workspace_index(document.workspace_id).remove_document(str(document.id))
+    document.status = DocumentStatus.UPLOADING
+    db.commit()
+    queue.enqueue(process_document, str(document.id))
+    db.refresh(document)
+    return document

@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     environment: str = "development"
     api_base_url: str = "http://localhost:8000"
 
+    # --- CORS (Phase 6): browser origins allowed to call this API.
+    # Comma-separated in the environment, e.g.
+    #   CORS_ORIGINS=http://localhost:3000,https://ember.example.com
+    cors_origins: str = "http://localhost:3000"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
 
 # Instantiated once, at import time. FastAPI's dependency injection
 # (Phase 2.2 onward) will use a small get_settings() wrapper around this
