@@ -81,4 +81,6 @@ RQ expects, no virtualization required.
 - [x] Phase 4.1 — index persistence: Postgres is source of truth; deterministic
       rebuild -> validate -> atomic swap; recovery via `ensure_index_fresh`
 - [x] Phase 4.2 — search performance (1k / 10k docs, P95 < 500ms met; see SEARCH_PERFORMANCE.md)
-- [ ] Phase 5+ — web, mobile, cloud, CI/CD, AI/RAG, hardening
+- [x] Phase 5 — web application (Next.js: auth, dashboard, search, documents, workspaces/folders, settings)
+- [x] Phase 6 — web <-> backend integration (services layer, token refresh, error handling, status polling)
+- [ ] Phase 7+ — mobile, hardening, cloud, CI/CD, observability, AI/RAG

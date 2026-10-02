@@ -29,3 +29,8 @@ class DocumentUploadResponse(BaseModel):
 
 class DocumentTextResponse(BaseModel):
     text: str
+
+
+
+class DocumentMove(BaseModel):
+    folder_id: uuid.UUID | None = None

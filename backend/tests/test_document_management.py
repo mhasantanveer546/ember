@@ -52,3 +52,28 @@ def test_cors_allows_configured_origin_only(client):
     assert ok.headers.get("access-control-allow-origin") == "http://localhost:3000"
     bad = client.options("/auth/login", headers={"Origin": "http://evil.example", "Access-Control-Request-Method": "POST"})
     assert "access-control-allow-origin" not in bad.headers
+
+
+def test_upload_into_folder_and_move(client):
+    headers, ws, doc = _setup(client, "folders@example.com")
+    folder = client.post(f"/workspaces/{ws}/folders", json={"name": "Nets"}, headers=headers).json()
+    up = client.post(
+        f"/workspaces/{ws}/documents",
+        data={"folder_id": folder["id"]},
+        files={"file": ("b.txt", b"second distinct document", "text/plain")},
+        headers=headers,
+    ).json()["document"]
+    assert up["folder_id"] == folder["id"]
+
+    moved = client.patch(f"/workspaces/{ws}/documents/{doc}", json={"folder_id": folder["id"]}, headers=headers)
+    assert moved.json()["folder_id"] == folder["id"]
+    back = client.patch(f"/workspaces/{ws}/documents/{doc}", json={"folder_id": None}, headers=headers)
+    assert back.json()["folder_id"] is None
+
+
+def test_cannot_use_another_workspaces_folder(client):
+    headers, ws, doc = _setup(client, "xfolder@example.com")
+    ws2 = client.post("/workspaces", json={"name": "Other"}, headers=headers).json()["id"]
+    foreign = client.post(f"/workspaces/{ws2}/folders", json={"name": "F"}, headers=headers).json()
+    r = client.patch(f"/workspaces/{ws}/documents/{doc}", json={"folder_id": foreign["id"]}, headers=headers)
+    assert r.status_code == 404

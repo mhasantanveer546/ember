@@ -8,15 +8,22 @@ indexing) happens in the worker (workers/document_processing.py),
 entirely outside this request/response cycle.
 """
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+import uuid
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from rq import Queue
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_owned_document, get_owned_workspace
 from app.core.queue import get_queue
 from app.db.session import get_db
-from app.models import Document, DocumentStatus, Workspace
-from app.schemas.document import DocumentResponse, DocumentTextResponse, DocumentUploadResponse
+from app.models import Document, DocumentStatus, Folder, Workspace
+from app.schemas.document import (
+    DocumentMove,
+    DocumentResponse,
+    DocumentTextResponse,
+    DocumentUploadResponse,
+)
 from app.services.duplicate_detection import find_duplicate_document
 from app.services.extraction.extraction_service import extract_text
 from app.services.search.index_registry import get_or_create_workspace_index
@@ -28,13 +35,24 @@ from app.workers.document_processing import process_document
 router = APIRouter(prefix="/workspaces/{workspace_id}/documents", tags=["documents"])
 
 
+def _require_folder_in_workspace(db: Session, workspace: Workspace, folder_id: uuid.UUID | None) -> None:
+    """A folder_id from the client is only trusted if it belongs to THIS workspace."""
+    if folder_id is None:
+        return
+    folder = db.get(Folder, folder_id)
+    if folder is None or folder.workspace_id != workspace.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+
+
 @router.post("", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     file: UploadFile = File(...),
+    folder_id: uuid.UUID | None = Form(default=None),
     workspace: Workspace = Depends(get_owned_workspace),
     db: Session = Depends(get_db),
     queue: Queue = Depends(get_queue),
 ) -> DocumentUploadResponse:
+    _require_folder_in_workspace(db, workspace, folder_id)
     content = await file.read()
 
     try:
@@ -50,6 +68,7 @@ async def upload_document(
 
     document = Document(
         workspace_id=workspace.id,
+        folder_id=folder_id,
         owner_id=workspace.owner_id,
         filename=file.filename,
         storage_key="",  # filled in below, once the document's own ID is known
@@ -143,5 +162,21 @@ def reindex_document(
     document.status = DocumentStatus.UPLOADING
     db.commit()
     queue.enqueue(process_document, str(document.id))
+    db.refresh(document)
+    return document
+
+
+
+@router.patch("/{document_id}", response_model=DocumentResponse)
+def move_document(
+    payload: DocumentMove,
+    document: Document = Depends(get_owned_document),
+    workspace: Workspace = Depends(get_owned_workspace),
+    db: Session = Depends(get_db),
+) -> Document:
+    """Move a document into a folder, or back to the workspace root (folder_id null)."""
+    _require_folder_in_workspace(db, workspace, payload.folder_id)
+    document.folder_id = payload.folder_id
+    db.commit()
     db.refresh(document)
     return document
