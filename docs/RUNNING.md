@@ -42,7 +42,17 @@ Open http://localhost:3000. API docs: http://localhost:8000/docs.
 
 **If the worker misbehaves on Windows**, skip Terminal 2: add `RUN_JOBS_INLINE=true` to `.env`, restart the API. Uploads then process inside the API (slower upload request, dev only).
 
-## 5. Manual test checklist (browser)
+## 5. Quick automated check (30 seconds)
+With the API (Terminal 1) and worker (Terminal 2) running, open a 4th terminal at the repo root:
+```bash
+source .venv/Scripts/activate
+python backend/scripts/smoke_test.py
+```
+It creates a throwaway user, uploads a file, waits for the worker, then checks search, phrase search, autocomplete,
+duplicate detection, bad-file rejection, user isolation and delete. Every line should say PASS (16/16). A FAIL line
+says which step broke, which usually points at the API, the worker or Redis.
+
+## 5b. Manual test checklist (browser)
 1. Register -> you land on the dashboard. Sign out, sign in again.
 2. Workspaces -> create "Test".
 3. Documents -> drop a .txt/.md/.pdf/.docx. Status goes UPLOADING -> PROCESSING -> INDEXING -> READY without refreshing.
