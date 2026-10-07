@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, oauth2_scheme
 from app.core import security
+from app.core.config import settings
 from app.core.denylist import add_to_denylist, is_denylisted
 from app.core.redis_client import get_redis_client
 from app.db.session import get_db
@@ -28,6 +29,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 def register(payload: UserRegister, db: Session = Depends(get_db)) -> User:
+    if not settings.allow_registration:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Registration is closed on this server.")
     existing_user = db.query(User).filter(User.email == payload.email).first()
     if existing_user is not None:
         raise HTTPException(

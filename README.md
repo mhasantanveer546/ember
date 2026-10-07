@@ -34,3 +34,5 @@ Phases 0–6 complete (search engine, backend, document pipeline, search API, we
 | Search engine      | Hand-rolled (Python)    | Core learning goal of the project             |
 
 Full rationale in `docs/ARCHITECTURE.md`.
+
+Deploying: see `docs/DEPLOYMENT.md` (free-tier path: Vercel + Render + Neon + Upstash + S3-compatible storage).

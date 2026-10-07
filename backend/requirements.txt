@@ -17,6 +17,7 @@ pydantic[email]
 redis
 
 # --- Phase 3: document pipeline ---
+boto3  # S3-compatible object storage (production file storage)
 pypdf
 python-docx
 rq

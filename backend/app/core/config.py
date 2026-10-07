@@ -12,6 +12,7 @@ Uses pydantic-settings so that:
     scattered through the codebase
 """
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,8 +37,14 @@ class Settings(BaseSettings):
     run_jobs_inline: bool = False
 
     # --- Storage ---
+    # "local" (development) or "s3" (any S3-compatible service; production).
     storage_backend: str = "local"
     local_storage_path: str = "./storage_data"
+    s3_endpoint_url: str = ""  # e.g. https://<project>.supabase.co/storage/v1/s3 ; empty = AWS
+    s3_bucket: str = ""
+    s3_region: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
 
     # --- App ---
     environment: str = "development"
@@ -47,6 +54,25 @@ class Settings(BaseSettings):
     # Comma-separated in the environment, e.g.
     #   CORS_ORIGINS=http://localhost:3000,https://ember.example.com
     cors_origins: str = "http://localhost:3000"
+
+    # Set to false on a public deployment once your own account exists, so
+    # strangers can't create accounts (and consume your storage/quota).
+    allow_registration: bool = True
+
+    @model_validator(mode="after")
+    def _check_production_safety(self) -> "Settings":
+        if self.storage_backend not in ("local", "s3"):
+            raise ValueError("STORAGE_BACKEND must be 'local' or 's3'")
+        if self.storage_backend == "s3" and not (
+            self.s3_bucket and self.s3_access_key_id and self.s3_secret_access_key
+        ):
+            raise ValueError("STORAGE_BACKEND=s3 requires S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY")
+        if self.environment == "production":
+            if len(self.jwt_secret) < 32:
+                raise ValueError("In production JWT_SECRET must be at least 32 characters")
+            if "localhost" in self.cors_origins:
+                raise ValueError("In production CORS_ORIGINS must list your real web origin(s), not localhost")
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -1,0 +1,39 @@
+# Render Blueprint: the Ember API on Render's free web service.
+# Dashboard -> New -> Blueprint -> pick this repo. Values marked `sync: false`
+# are secrets you paste into the Render dashboard; they are never committed.
+services:
+  - type: web
+    name: ember-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL          # Neon connection string, keep ?sslmode=require
+        sync: false
+      - key: JWT_SECRET            # >= 32 random characters
+        sync: false
+      - key: REDIS_URL             # Upstash rediss:// URL
+        sync: false
+      - key: CORS_ORIGINS          # your Vercel URL, e.g. https://ember-xyz.vercel.app
+        sync: false
+      - key: RUN_JOBS_INLINE       # free plan has no background worker: process uploads in the API
+        value: "true"
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: ALLOW_REGISTRATION
+        value: "true"

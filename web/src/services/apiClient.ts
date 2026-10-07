@@ -29,7 +29,7 @@ export function friendlyMessage(status: number, detail: unknown): string {
     case 401:
       return fromBackend ?? "Your session has expired. Please sign in again.";
     case 403:
-      return "You don't have permission to do that.";
+      return fromBackend ?? "You don't have permission to do that.";
     case 404:
       return "We couldn't find that. It may have been deleted.";
     case 409:

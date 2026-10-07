@@ -83,4 +83,5 @@ RQ expects, no virtualization required.
 - [x] Phase 4.2 — search performance (1k / 10k docs, P95 < 500ms met; see SEARCH_PERFORMANCE.md)
 - [x] Phase 5 — web application (Next.js: auth, dashboard, search, documents, workspaces/folders, settings)
 - [x] Phase 6 — web <-> backend integration (services layer, token refresh, error handling, status polling)
+- [x] Deployment prep — Dockerfile, render.yaml, S3 storage backend, production config checks, registration switch (docs/DEPLOYMENT.md)
 - [ ] Phase 7+ — mobile, hardening, cloud, CI/CD, observability, AI/RAG
