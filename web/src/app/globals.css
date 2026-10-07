@@ -3,57 +3,69 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Ember design tokens.
- * Light: "linen" (cool, slightly green paper).  Dark: "char" (warm graphite).
- * Ink does the heavy lifting. The single accent, ember, is reserved for
- * the places where knowledge is found: matched words, the active marker, the brand.
+ * Ember design tokens, sampled from the product mockup.
+ * Dark is the default: teal-tinted navy surfaces, steel-blue actions,
+ * a flame-orange brand mark. Matched words in results glow like embers.
  */
 :root {
-  --bg: #f1f0eb;
-  --surface: #f9f8f5;
-  --sunken: #e8e6df;
-  --line: #d6d3c9;
-  --line-soft: #e2e0d8;
-  --fg: #1f1e1b;
-  --muted: #67635a;
-  --faint: #969185;
-  --ink: #1f1e1b;
-  --ink-fg: #f9f8f5;
-  --ember: #e07a12;
-  --ember-text: #a54d08;
-  --glow: #ffdcab;
-  --glow-line: #e88a1f;
-  --on-ember: #1f1e1b;
-  --ok: #2c6e47;
-  --warn: #8f5b00;
-  --danger: #b3321f;
-  --shadow: 0 10px 30px -12px rgb(60 45 20 / 0.28);
+  --bg: #f2f5f9;
+  --sidebar: #ffffff;
+  --surface: #ffffff;
+  --sunken: #e8eef5;
+  --line: #d6dfe9;
+  --line-soft: #e3e9f1;
+  --fg: #0e1b28;
+  --muted: #526579;
+  --faint: #8394a7;
+  --primary: #2563b0;
+  --primary-fg: #ffffff;
+  --primary-soft: #dce9f8;
+  --ember: #f0661f;
+  --ember-text: #c2410c;
+  --glow: rgb(255 140 60 / 0.26);
+  --glow-line: #f0661f;
+  --on-ember: #ffffff;
+  --knowledge: #e6f5ee;
+  --knowledge-line: #bfe3d2;
+  --green: #16895e;
+  --web: #2563b0;
+  --ok: #16895e;
+  --warn: #a15c07;
+  --danger: #c02f2f;
+  --shadow: 0 12px 32px -14px rgb(14 27 40 / 0.3);
 }
 
 .dark {
-  --bg: #161513;
-  --surface: #1f1e1b;
-  --sunken: #11100f;
-  --line: #36342e;
-  --line-soft: #292723;
-  --fg: #edeae2;
-  --muted: #a09b8f;
-  --faint: #6f6b62;
-  --ink: #edeae2;
-  --ink-fg: #161513;
-  --ember: #ff9b3d;
-  --ember-text: #ffb468;
-  --glow: rgb(255 155 61 / 0.28);
-  --glow-line: #ff9b3d;
-  --on-ember: #161513;
-  --ok: #6fcf97;
+  --bg: #0d1a27;
+  --sidebar: #08111b;
+  --surface: #10202e;
+  --sunken: #152638;
+  --line: #20364a;
+  --line-soft: #182b3c;
+  --fg: #e8eef5;
+  --muted: #8da0b4;
+  --faint: #5c7087;
+  --primary: #2f74b4;
+  --primary-fg: #ffffff;
+  --primary-soft: #0f2a47;
+  --ember: #ff7a2f;
+  --ember-text: #ff9a5c;
+  --glow: rgb(255 122 47 / 0.28);
+  --glow-line: #ff7a2f;
+  --on-ember: #08111b;
+  --knowledge: #0e2731;
+  --knowledge-line: #14413f;
+  --green: #3fd6a0;
+  --web: #5aa9ff;
+  --ok: #3fd6a0;
   --warn: #f2b45a;
   --danger: #ff8a7a;
-  --shadow: 0 14px 34px -12px rgb(0 0 0 / 0.7);
+  --shadow: 0 18px 40px -16px rgb(0 0 0 / 0.75);
 }
 
 @theme inline {
   --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
   --color-surface: var(--surface);
   --color-sunken: var(--sunken);
   --color-line: var(--line);
@@ -61,55 +73,62 @@
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
-  --color-ink: var(--ink);
-  --color-ink-fg: var(--ink-fg);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
   --color-ember: var(--ember);
   --color-ember-text: var(--ember-text);
   --color-glow: var(--glow);
   --color-on-ember: var(--on-ember);
+  --color-knowledge: var(--knowledge);
+  --color-knowledge-line: var(--knowledge-line);
+  --color-green: var(--green);
+  --color-web: var(--web);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
-  --font-sans: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-serif: "Source Serif 4 Variable", ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --shadow-pop: var(--shadow);
 }
 
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 14.5px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss03";
 }
 
 ::selection {
   background: var(--glow);
 }
 
-/* Headings are sans, heavy and tight. Content you wrote is serif (.passage). */
 .display {
-  font-weight: 600;
-  letter-spacing: -0.028em;
-  line-height: 1.08;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
   text-wrap: balance;
 }
 
-/* Your own words: snippets and document text. */
+/* Text pulled from your documents. */
 .passage {
-  font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  line-height: 1.7;
+  font-size: 0.9375rem;
+  line-height: 1.65;
   text-wrap: pretty;
 }
 
-/* The one memorable moment: matched words kindle. */
+/* The memorable moment: matched words kindle. */
 mark.hit {
   color: inherit;
   background-color: var(--glow);
@@ -119,22 +138,27 @@ mark.hit {
   margin: 0 -0.02em;
   animation: kindle 700ms ease-out both;
 }
-.dark mark.hit {
-  text-shadow: 0 0 14px rgb(255 155 61 / 0.55);
-}
 mark.hit.active {
   background-color: var(--ember);
   color: var(--on-ember);
   box-shadow: none;
-  text-shadow: none;
   animation: none;
+}
+/* On the white "paper" of the reader and previews. */
+.paper mark.hit {
+  background-color: #ffd9b8;
+  box-shadow: inset 0 -2px 0 #f0661f;
+  color: #1a2330;
+}
+.paper mark.hit.active {
+  background-color: #f0661f;
+  color: #fff;
 }
 
 @keyframes kindle {
   from {
     background-color: transparent;
     box-shadow: inset 0 -2px 0 transparent;
-    text-shadow: none;
   }
 }
 
@@ -152,13 +176,12 @@ mark.hit.active {
 /* In @layer base so component utilities like outline-none can override it. */
 @layer base {
   :focus-visible {
-    outline: 2px solid var(--ember);
+    outline: 2px solid var(--web);
     outline-offset: 2px;
     border-radius: 4px;
   }
-  button, a, select, input { transition: background-color 150ms, border-color 150ms, color 150ms, transform 150ms; }
+  button, a, select, input { transition: background-color 150ms, border-color 150ms, color 150ms, transform 150ms, box-shadow 150ms; }
   button:active:not(:disabled) { transform: scale(0.98); }
-  /* The browser's default blue clear button clashes with the palette. */
   input[type="search"]::-webkit-search-cancel-button,
   input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
 }

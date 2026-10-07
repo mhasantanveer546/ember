@@ -80,7 +80,7 @@ export function UploadZone({
           <p className="font-medium">Drop files here to add them</p>
           <p className="text-sm text-muted">PDF, text, Markdown or Word, up to 25 MB each.</p>
         </div>
-        <button onClick={() => input.current?.click()} className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-ink-fg hover:opacity-90">
+        <button onClick={() => input.current?.click()} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90">
           Choose files
         </button>
         <input

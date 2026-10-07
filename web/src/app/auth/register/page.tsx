@@ -33,7 +33,7 @@ export default function RegisterPage() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <h1 className="display text-[28px]">Create your account</h1>
+      <h1 className="text-[28px] font-semibold tracking-tight">Create your account</h1>
       {error && <ErrorNote message={error} />}
       <Input label="Email" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
       <Input label="Password" name="password" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -42,7 +42,7 @@ export default function RegisterPage() {
         {busy ? "Creating account…" : "Create account"}
       </Button>
       <p className="text-sm text-muted">
-        Already have an account? <Link href="/auth/login" className="font-medium text-fg underline decoration-ember decoration-2 underline-offset-4">Sign in</Link>
+        Already have an account? <Link href="/auth/login" className="font-medium text-web hover:underline">Sign in</Link>
       </p>
     </form>
   );

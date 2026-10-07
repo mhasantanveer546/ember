@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <h1 className="display text-[28px]">Sign in</h1>
+      <h1 className="text-[28px] font-semibold tracking-tight">Sign in</h1>
       {error && <ErrorNote message={error} />}
       <Input label="Email" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
       <Input label="Password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -39,7 +39,7 @@ export default function LoginPage() {
       </Button>
       <div className="flex justify-between text-sm text-muted">
         <Link href="/auth/forgot-password" className="hover:text-fg">Forgot password?</Link>
-        <Link href="/auth/register" className="font-medium text-fg underline decoration-ember decoration-2 underline-offset-4">Create an account</Link>
+        <Link href="/auth/register" className="font-medium text-web hover:underline">Create an account</Link>
       </div>
     </form>
   );

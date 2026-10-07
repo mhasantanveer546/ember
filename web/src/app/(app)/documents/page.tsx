@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UploadZone } from "@/components/UploadZone";
-import { Button, EmptyState, ErrorNote, FileTag, Input, PageHeader, RowsSkeleton, Select } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorNote, FileTag, Input, PageHeader, RowsSkeleton, Select } from "@/components/ui";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useDocuments } from "@/hooks/useDocuments";
-import { formatBytes, formatDate } from "@/lib/format";
+import { formatBytes, formatRelative } from "@/lib/format";
 import { documentService } from "@/services/documents";
 import type { DocumentStatus } from "@/types/api";
 
@@ -34,7 +34,7 @@ export default function DocumentsPage() {
   }, [documents, filter, status, sort]);
 
   if (wsLoading) return <RowsSkeleton rows={3} />;
-  if (!current) return <EmptyState title="Create a workspace first" body="Documents live inside a workspace." action={<Link href="/workspaces" className="font-medium underline decoration-ember decoration-2 underline-offset-4">Go to Workspaces</Link>} />;
+  if (!current) return <EmptyState title="Create a workspace first" body="Your knowledge lives inside a workspace." action={<Link href="/workspaces" className="font-medium text-web underline underline-offset-4">Go to Workspaces</Link>} />;
 
   const act = async (fn: () => Promise<unknown>) => {
     setActionError(null);
@@ -48,11 +48,11 @@ export default function DocumentsPage() {
 
   return (
     <>
-      <PageHeader title="Documents" subtitle={`In ${current.name}`} />
+      <PageHeader title="Knowledge" subtitle={`Everything you’ve added to ${current.name}`} />
       <UploadZone workspaceId={current.id} onUploaded={reload} />
 
       {documents.length > 0 && (
-        <div className="mt-10 grid gap-4 sm:grid-cols-[1fr_9rem_9rem]">
+        <div className="mt-8 grid gap-4 sm:grid-cols-[1fr_10rem_10rem]">
           <Input label="Filter by name" name="filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="networking" />
           <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as DocumentStatus | "ALL")}>
             <option value="ALL">All</option>
@@ -71,13 +71,9 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      {(error || actionError) && (
-        <div className="mt-6">
-          <ErrorNote message={(error ?? actionError)!} onRetry={error ? reload : undefined} />
-        </div>
-      )}
+      {(error || actionError) && <div className="mt-6"><ErrorNote message={(error ?? actionError)!} onRetry={error ? reload : undefined} /></div>}
 
-      <div className="mt-8">
+      <div className="mt-6">
         {loading ? (
           <RowsSkeleton rows={4} />
         ) : documents.length === 0 ? (
@@ -85,35 +81,33 @@ export default function DocumentsPage() {
         ) : visible.length === 0 ? (
           <EmptyState title="Nothing matches those filters" body="Clear the filter or choose a different status." />
         ) : (
-          <ul className="border-t border-line">
-            {visible.map((d) => (
-              <li key={d.id} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 border-b border-line-soft py-3.5 sm:grid-cols-[1fr_5rem_6.5rem_7rem_auto]">
-                <div className="flex min-w-0 items-center gap-3">
-                  <FileTag filename={d.filename} />
-                  <Link href={`/documents/${d.id}`} className="truncate font-medium hover:text-ember-text">
-                    {d.filename}
-                  </Link>
-                </div>
-                <span className="hidden text-right text-sm tabular-nums text-muted sm:block">{formatBytes(d.file_size_bytes)}</span>
-                <span className="hidden text-sm tabular-nums text-muted sm:block">{formatDate(d.created_at)}</span>
-                <StatusBadge status={d.status} />
-                <div className="col-span-2 flex gap-1 sm:col-span-1">
-                  <Button variant="ghost" size="sm" onClick={() => act(() => documentService.reindex(current.id, d.id))}>
-                    Re-index
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => {
-                      if (confirm(`Delete “${d.filename}”? This can’t be undone.`)) void act(() => documentService.remove(current.id, d.id));
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-line-soft">
+              {visible.map((d) => (
+                <li key={d.id} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-sunken/50 sm:grid-cols-[1fr_5rem_8rem_7rem_auto]">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <FileTag filename={d.filename} />
+                    <Link href={`/documents/${d.id}`} className="truncate font-medium hover:text-web">{d.filename}</Link>
+                  </div>
+                  <span className="hidden text-right text-sm tabular-nums text-muted sm:block">{formatBytes(d.file_size_bytes)}</span>
+                  <span className="hidden text-sm text-muted sm:block">{formatRelative(d.created_at)}</span>
+                  <StatusBadge status={d.status} />
+                  <div className="col-span-2 flex gap-1 sm:col-span-1">
+                    <Button variant="ghost" size="sm" onClick={() => act(() => documentService.reindex(current.id, d.id))}>Re-index</Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Delete “${d.filename}”? This can’t be undone.`)) void act(() => documentService.remove(current.id, d.id));
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
         )}
       </div>
     </>

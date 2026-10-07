@@ -2,85 +2,104 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Icon, type IconName } from "./Icon";
 import { Logo } from "./Logo";
-import { ThemeToggle } from "./ThemeToggle";
 import { WorkspaceSelector } from "./WorkspaceSelector";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/search", label: "Search", icon: "search" },
-  { href: "/documents", label: "Documents", icon: "file" },
-  { href: "/workspaces", label: "Workspaces", icon: "folders" },
-  { href: "/settings", label: "Settings", icon: "sliders" },
+  { href: "/documents", label: "Knowledge", icon: "knowledge" },
+  { href: "/workspaces", label: "Workspaces", icon: "layers" },
+  { href: "/history", label: "History", icon: "clock" },
 ];
 
-function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuth();
+const MOBILE_TABS: { href: string; label: string; icon: IconName }[] = [
+  { href: "/dashboard", label: "Home", icon: "home" },
+  { href: "/search", label: "Search", icon: "search" },
+  { href: "/documents", label: "Knowledge", icon: "knowledge" },
+  { href: "/settings", label: "Profile", icon: "user" },
+];
 
+const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+function NavLink({ href, label, icon, pathname }: { href: string; label: string; icon: IconName; pathname: string }) {
+  const active = isActive(pathname, href);
   return (
-    <div className="flex h-full flex-col gap-6">
-      <Logo />
-      <WorkspaceSelector />
-      <nav aria-label="Main" className="flex flex-col gap-0.5">
-        {NAV.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              aria-current={active ? "page" : undefined}
-              className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] ${
-                active ? "bg-sunken font-semibold text-fg" : "text-muted hover:bg-sunken/70 hover:text-fg"
-              }`}
-            >
-              {active && <span className="absolute -left-4 top-2 bottom-2 w-[3px] rounded-r bg-ember" />}
-              <Icon name={item.icon} className={`h-[18px] w-[18px] ${active ? "text-ember-text" : ""}`} />
-              {item.label}
-              {item.href === "/search" && <kbd className="ml-auto rounded border border-line px-1.5 text-[11px] text-faint">/</kbd>}
-            </Link>
-          );
-        })}
-      </nav>
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] ${active ? "bg-sunken font-semibold text-fg" : "text-muted hover:bg-sunken/60 hover:text-fg"}`}
+    >
+      <Icon name={icon} className={`h-[18px] w-[18px] ${active ? "text-web" : ""}`} />
+      {label}
+    </Link>
+  );
+}
 
-      <div className="mt-auto space-y-4">
-        <ThemeToggle />
-        {user && (
-          <div className="flex items-center gap-3 border-t border-line-soft pt-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-ink text-sm font-semibold text-ink-fg">{user.email[0].toUpperCase()}</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium" title={user.email}>{user.email}</p>
-              <button
-                onClick={async () => {
-                  await logout();
-                  router.replace("/auth/login");
-                }}
-                className="text-[13px] text-muted hover:text-fg"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+function AvatarMenu() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+
+  if (!user) return null;
+  const item = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-sunken";
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={user.email}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#ffb08a] to-[#ff6b4a] text-sm font-semibold text-[#3a1308]"
+      >
+        {user.email[0].toUpperCase()}
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 z-40 mt-2 w-60 rounded-xl border border-line bg-surface p-1.5 shadow-pop">
+          <p className="truncate px-3 py-2 text-xs text-muted">{user.email}</p>
+          <Link href="/workspaces" role="menuitem" onClick={() => setOpen(false)} className={item}><Icon name="layers" className="h-4 w-4 text-muted" /> Workspaces</Link>
+          <Link href="/history" role="menuitem" onClick={() => setOpen(false)} className={item}><Icon name="clock" className="h-4 w-4 text-muted" /> History</Link>
+          <Link href="/settings" role="menuitem" onClick={() => setOpen(false)} className={item}><Icon name="gear" className="h-4 w-4 text-muted" /> Settings</Link>
+          <button
+            role="menuitem"
+            onClick={async () => {
+              setOpen(false);
+              await logout();
+              router.replace("/auth/login");
+            }}
+            className={`${item} border-t border-line-soft`}
+          >
+            <Icon name="logout" className="h-4 w-4 text-muted" /> Sign out
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [drawer, setDrawer] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- close the mobile drawer after navigation
-    setDrawer(false);
-  }, [pathname]);
+  const home = pathname === "/dashboard";
+  const reader = /^\/documents\/[^/]+$/.test(pathname);
 
   // "/" jumps to search from anywhere (focuses the box if this page has one).
   useEffect(() => {
@@ -99,37 +118,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-dvh">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-ink focus:px-4 focus:py-2 focus:text-ink-fg">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-fg">
         Skip to content
       </a>
 
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-line-soft px-6 py-6 md:block">
-        <SidebarBody />
+      <aside className="sticky top-0 hidden h-dvh w-[224px] shrink-0 flex-col border-r border-line-soft bg-sidebar px-3.5 py-5 md:flex">
+        <div className="px-2"><Logo /></div>
+        <nav aria-label="Main" className="mt-8 flex flex-col gap-1">
+          {NAV.map((n) => <NavLink key={n.href} {...n} pathname={pathname} />)}
+        </nav>
+        <div className="mt-auto">
+          <NavLink href="/settings" label="Settings" icon="gear" pathname={pathname} />
+        </div>
       </aside>
 
-      {drawer && (
-        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
-          <button className="absolute inset-0 bg-black/40" onClick={() => setDrawer(false)} aria-label="Close menu" />
-          <aside className="relative h-full w-72 bg-bg px-6 py-6 shadow-pop">
-            <SidebarBody onNavigate={() => setDrawer(false)} />
-          </aside>
-        </div>
-      )}
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line-soft bg-bg/90 px-4 backdrop-blur md:hidden">
-          <button onClick={() => setDrawer(true)} className="-ml-1 rounded-lg p-2 text-muted hover:bg-sunken" aria-label="Open menu">
-            <Icon name="menu" />
-          </button>
-          <Logo />
-          <Link href="/search" className="ml-auto rounded-lg p-2 text-muted hover:bg-sunken" aria-label="Search">
-            <Icon name="search" />
-          </Link>
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <header className={`z-30 flex h-16 items-center gap-3 px-4 md:px-8 ${home ? "absolute inset-x-0 top-0" : "sticky top-0 border-b border-line-soft bg-bg/85 backdrop-blur"}`}>
+          <div className="md:hidden"><Logo /></div>
+          <div className="max-w-60 min-w-0"><WorkspaceSelector /></div>
+          <div className="ml-auto flex items-center gap-3">
+            <Link href="/search" className="rounded-full p-2 text-muted hover:bg-sunken hover:text-fg md:hidden" aria-label="Search"><Icon name="search" /></Link>
+            <AvatarMenu />
+          </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 md:px-12 md:py-14">
+
+        <main id="main" className={home ? "flex-1 pb-20 md:pb-0" : `mx-auto w-full flex-1 px-4 pb-28 pt-6 md:px-8 md:pb-14 md:pt-8 ${reader ? "max-w-none" : "max-w-[1180px]"}`}>
           {children}
         </main>
       </div>
+
+      <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line-soft bg-sidebar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+        {MOBILE_TABS.map((t) => {
+          const active = isActive(pathname, t.href);
+          return (
+            <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined} className={`flex flex-col items-center gap-1 py-2.5 text-[11px] ${active ? "font-semibold text-web" : "text-muted"}`}>
+              <Icon name={t.icon} className="h-5 w-5" />
+              {t.label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

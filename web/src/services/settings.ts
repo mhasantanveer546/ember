@@ -11,7 +11,7 @@ export interface Preferences {
 }
 
 const KEY = "ember.preferences";
-export const DEFAULT_PREFERENCES: Preferences = { theme: "system", resultsPerSearch: 20 };
+export const DEFAULT_PREFERENCES: Preferences = { theme: "dark", resultsPerSearch: 20 };
 
 export const settingsService = {
   load(): Preferences {

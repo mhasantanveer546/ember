@@ -11,11 +11,11 @@ interface Props {
   autoFocus?: boolean;
   onSubmit: (query: string) => void;
   loading?: boolean;
-  size?: "md" | "lg";
+  variant?: "hero" | "bar";
 }
 
 /** Search input with debounced prefix autocomplete on the last word of the query. */
-export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit, loading, size = "lg" }: Props) {
+export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit, loading, variant = "bar" }: Props) {
   const [value, setValue] = useState(initialValue);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -64,12 +64,16 @@ export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit,
     onSubmit(q);
   };
 
-  const big = size === "lg";
+  const hero = variant === "hero";
 
   return (
     <div ref={wrapper} className="relative">
-      <div className={`flex items-center gap-2 rounded-2xl border border-line bg-surface pl-4 pr-2 shadow-sm focus-within:border-ember focus-within:ring-4 focus-within:ring-ember/15 ${big ? "py-2" : "py-1"}`}>
-        <Icon name="search" className={`shrink-0 text-faint ${big ? "h-5 w-5" : "h-[18px] w-[18px]"}`} />
+      <div
+        className={`flex items-center gap-3 border pl-4 pr-2 focus-within:border-web focus-within:ring-4 focus-within:ring-web/15 ${
+          hero ? "rounded-full border-white/12 bg-[#0b1623]/70 py-1.5 shadow-pop backdrop-blur-md" : "rounded-2xl border-line bg-sunken py-1"
+        }`}
+      >
+        <Icon name="search" className={`shrink-0 ${hero ? "h-5 w-5 text-white/70" : "h-[18px] w-[18px] text-muted"}`} />
         <input
           data-search-input
           type="search"
@@ -93,25 +97,26 @@ export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit,
               else submit();
             } else if (e.key === "Escape") setOpen(false);
           }}
-          placeholder={big ? "A word, a half-remembered phrase…" : "Search…"}
+          placeholder={hero ? "Search your knowledge…" : "Search…"}
           aria-label="Search your documents"
           role="combobox"
           aria-expanded={open && suggestions.length > 0}
           aria-autocomplete="list"
           aria-controls="ember-suggestions"
           disabled={!workspaceId}
-          className={`min-w-0 flex-1 bg-transparent outline-none placeholder:text-faint disabled:opacity-50 ${big ? "py-2 text-lg" : "py-1.5 text-base"}`}
+          className={`min-w-0 flex-1 bg-transparent outline-none disabled:opacity-50 ${hero ? "py-2.5 text-[16px] text-white placeholder:text-white/55" : "py-2 text-[15px] placeholder:text-faint"}`}
         />
         <button
           onClick={submit}
+          aria-label="Search"
           disabled={!workspaceId || !value.trim() || loading}
-          className={`shrink-0 rounded-xl bg-ink font-medium text-ink-fg hover:opacity-90 disabled:opacity-40 ${big ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-sm"}`}
+          className={`flex shrink-0 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-40 ${hero ? "h-10 w-10 text-white/70 hover:text-white" : "h-9 w-9 text-muted hover:text-fg"}`}
         >
-          Search
+          <Icon name="search" className="h-[18px] w-[18px]" />
         </button>
       </div>
       {open && suggestions.length > 0 && (
-        <ul id="ember-suggestions" role="listbox" className="absolute z-10 mt-2 w-full overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-pop">
+        <ul id="ember-suggestions" role="listbox" className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-pop">
           {suggestions.map((s, i) => {
             const prefix = lastWord.toLowerCase();
             const hasPrefix = s.startsWith(prefix);
