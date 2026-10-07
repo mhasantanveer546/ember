@@ -10,12 +10,11 @@ export const metadata = { title: "Forgot password" };
 export default function ForgotPasswordPage() {
   return (
     <div className="space-y-4">
-      <h1 className="font-serif text-xl font-semibold">Forgot your password?</h1>
+      <h1 className="display text-[28px]">Forgot your password?</h1>
       <p className="text-sm text-muted">
-        Password reset by email isn&apos;t available yet. It&apos;s planned together with email delivery in a later
-        release. Until then, please contact the administrator of your Ember instance.
+        Resetting a password by email isn’t available yet. It needs email delivery, which is planned for a later release. Until then, ask the administrator of your Ember instance to reset it.
       </p>
-      <Link href="/auth/login" className="text-sm text-accent hover:underline">
+      <Link href="/auth/login" className="text-sm font-medium underline decoration-ember decoration-2 underline-offset-4">
         ← Back to sign in
       </Link>
     </div>

@@ -1,17 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Icon } from "@/components/Icon";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Button, Card, ErrorNote, LoadingBlock } from "@/components/ui";
+import { Button, ErrorNote, FileTag, RowsSkeleton } from "@/components/ui";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { escapeRegExp, queryTerms } from "@/lib/highlight";
 import { documentService } from "@/services/documents";
 import type { EmberDocument } from "@/types/api";
 
-const MAX_CHARS = 200_000; // keep the DOM responsive on very large documents
+const MAX_CHARS = 200_000; // keeps the page responsive on very large documents
 
 function DocumentView() {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +28,6 @@ function DocumentView() {
   const [terms, setTerms] = useState(() => queryTerms(params.get("q") ?? ""));
   const [termInput, setTermInput] = useState(params.get("q") ?? "");
   const [active, setActive] = useState(0);
-  const container = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!workspaceId) return;
@@ -48,7 +48,7 @@ function DocumentView() {
     void load();
   }, [load]);
 
-  // Poll status while the document is still being processed (Phase 6.2).
+  // Poll while the document is still being processed (Phase 6.2).
   useEffect(() => {
     if (!doc || !["UPLOADING", "PROCESSING", "INDEXING"].includes(doc.status)) return;
     const t = setTimeout(load, 2000);
@@ -67,29 +67,34 @@ function DocumentView() {
 
   useEffect(() => {
     if (hitCount === 0) return;
-    container.current?.querySelector(`[data-hit="${active}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    document.querySelector(`[data-hit="${active}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [active, hitCount, terms]);
 
-  if (!workspaceId) return <LoadingBlock />;
+  if (!workspaceId) return <RowsSkeleton rows={2} />;
   if (error) return <ErrorNote message={error} onRetry={load} />;
-  if (!doc) return <LoadingBlock />;
+  if (!doc) return <RowsSkeleton rows={2} />;
 
   const step = (delta: number) => hitCount && setActive((a) => (a + delta + hitCount) % hitCount);
 
   return (
     <>
-      <Link href="/documents" className="text-sm text-muted hover:text-fg">← Documents</Link>
-      <div className="mb-6 mt-2 flex flex-wrap items-start justify-between gap-3">
+      <Link href="/documents" className="-ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
+        <Icon name="back" className="h-4 w-4" /> Documents
+      </Link>
+      <header className="mb-8 mt-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="break-words font-serif text-2xl font-semibold tracking-tight">{doc.filename}</h1>
-          <p className="mt-1 text-sm text-muted">
-            {formatBytes(doc.file_size_bytes)} · Added {formatDateTime(doc.created_at)}
+          <div className="mb-2"><FileTag filename={doc.filename} /></div>
+          <h1 className="display break-words text-[30px]">{doc.filename}</h1>
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 text-sm text-muted">
+            <span className="tabular-nums">{formatBytes(doc.file_size_bytes)}</span>
+            <span>Added {formatDateTime(doc.created_at)}</span>
+            <StatusBadge status={doc.status} />
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <StatusBadge status={doc.status} />
+        <div className="flex gap-1">
           <Button
             variant="secondary"
+            size="sm"
             onClick={async () => {
               try {
                 setDoc(await documentService.reindex(workspaceId, doc.id));
@@ -103,8 +108,9 @@ function DocumentView() {
           </Button>
           <Button
             variant="danger"
+            size="sm"
             onClick={async () => {
-              if (!confirm(`Delete “${doc.filename}”? This can't be undone.`)) return;
+              if (!confirm(`Delete “${doc.filename}”? This can’t be undone.`)) return;
               try {
                 await documentService.remove(workspaceId, doc.id);
                 router.replace("/documents");
@@ -116,15 +122,15 @@ function DocumentView() {
             Delete
           </Button>
         </div>
-      </div>
+      </header>
 
-      {doc.status === "FAILED" && <ErrorNote message="We couldn't extract text from this file. Try Re-index, or upload a different copy." />}
-      {["UPLOADING", "PROCESSING", "INDEXING"].includes(doc.status) && <LoadingBlock label="Ember is reading this document…" />}
+      {doc.status === "FAILED" && <ErrorNote message="Ember couldn’t read the text in this file. Try Re-index, or upload a different copy. Scanned PDFs without selectable text can’t be read yet." />}
+      {["UPLOADING", "PROCESSING", "INDEXING"].includes(doc.status) && <RowsSkeleton rows={3} />}
 
       {doc.status === "READY" && (
-        <Card className="!p-0">
+        <>
           <form
-            className="flex flex-wrap items-center gap-2 border-b border-line p-3"
+            className="sticky top-14 z-10 -mx-5 flex flex-wrap items-center gap-2 border-y border-line-soft bg-bg/95 px-5 py-2.5 backdrop-blur md:top-0 md:-mx-12 md:px-12"
             onSubmit={(e) => {
               e.preventDefault();
               setTerms(queryTerms(termInput));
@@ -136,32 +142,35 @@ function DocumentView() {
               onChange={(e) => setTermInput(e.target.value)}
               placeholder="Find in this document"
               aria-label="Find in this document"
-              className="min-w-40 flex-1 rounded-lg border border-line bg-bg px-3 py-1.5 text-sm"
+              className="min-w-40 flex-1 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm placeholder:text-faint focus:border-ink"
             />
-            <Button type="submit" variant="secondary" className="!py-1.5">Find</Button>
-            <span className="text-xs text-muted" aria-live="polite">
+            <Button type="submit" variant="secondary" size="sm">Find</Button>
+            <span className="min-w-16 text-center text-[13px] tabular-nums text-muted" aria-live="polite">
               {terms.length ? (hitCount ? `${active + 1} of ${hitCount}` : "No matches") : ""}
             </span>
-            <Button type="button" variant="ghost" className="!px-2 !py-1.5" onClick={() => step(-1)} disabled={!hitCount} aria-label="Previous match">↑</Button>
-            <Button type="button" variant="ghost" className="!px-2 !py-1.5" onClick={() => step(1)} disabled={!hitCount} aria-label="Next match">↓</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => step(-1)} disabled={!hitCount} aria-label="Previous match"><Icon name="up" className="h-4 w-4" /></Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => step(1)} disabled={!hitCount} aria-label="Next match"><Icon name="down" className="h-4 w-4" /></Button>
           </form>
-          <div ref={container} className="max-h-[70vh] overflow-y-auto whitespace-pre-wrap break-words p-5 text-[15px] leading-7">
+
+          <article className="passage mt-10 max-w-[68ch] whitespace-pre-wrap break-words pb-24 !text-[1.125rem] !leading-[1.8]">
             {textError ? (
-              <span className="text-danger">{textError}</span>
+              <span className="font-sans text-[15px] text-danger">{textError}</span>
             ) : text === null ? (
-              <LoadingBlock label="Loading text…" />
+              <RowsSkeleton rows={3} />
             ) : (
               parts.map((p, i) =>
                 p.hit === null ? (
                   <span key={i}>{p.s}</span>
                 ) : (
-                  <mark key={i} data-hit={p.hit} className={`hit ${p.hit === active ? "active" : ""}`}>{p.s}</mark>
+                  <mark key={i} data-hit={p.hit} className={`hit ${p.hit === active ? "active" : ""}`}>
+                    {p.s}
+                  </mark>
                 ),
               )
             )}
-            {truncated && <p className="mt-4 text-xs text-muted">Preview truncated to the first {MAX_CHARS.toLocaleString()} characters.</p>}
-          </div>
-        </Card>
+            {truncated && <p className="mt-6 font-sans text-[13px] text-muted">Showing the first {MAX_CHARS.toLocaleString()} characters.</p>}
+          </article>
+        </>
       )}
     </>
   );
@@ -169,7 +178,7 @@ function DocumentView() {
 
 export default function DocumentPage() {
   return (
-    <Suspense fallback={<LoadingBlock />}>
+    <Suspense fallback={<RowsSkeleton rows={2} />}>
       <DocumentView />
     </Suspense>
   );

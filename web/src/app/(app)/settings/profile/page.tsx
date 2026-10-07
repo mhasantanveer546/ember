@@ -1,22 +1,23 @@
 "use client";
 
-import { Card } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 
 export default function ProfileSettings() {
   const { user } = useAuth();
   if (!user) return null;
   return (
-    <Card className="max-w-xl space-y-4">
-      <div>
-        <p className="text-sm text-muted">Email</p>
-        <p className="font-medium">{user.email}</p>
-      </div>
-      <div>
-        <p className="text-sm text-muted">Account ID</p>
-        <p className="font-mono text-xs">{user.id}</p>
-      </div>
-      <p className="text-sm text-muted">Editing your email or display name isn&apos;t available yet.</p>
-    </Card>
+    <div className="max-w-lg">
+      <dl className="divide-y divide-line-soft border-y border-line-soft">
+        <div className="py-4">
+          <dt className="text-sm text-muted">Email</dt>
+          <dd className="mt-0.5 font-medium">{user.email}</dd>
+        </div>
+        <div className="py-4">
+          <dt className="text-sm text-muted">Account ID</dt>
+          <dd className="mt-0.5 break-all text-sm tabular-nums">{user.id}</dd>
+        </div>
+      </dl>
+      <p className="mt-4 text-sm text-muted">Changing your email isn’t available yet.</p>
+    </div>
   );
 }

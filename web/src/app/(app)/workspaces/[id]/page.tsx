@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Icon } from "@/components/Icon";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UploadZone } from "@/components/UploadZone";
-import { Button, Card, EmptyState, ErrorNote, Input, LoadingBlock, PageHeader } from "@/components/ui";
+import { Button, EmptyState, ErrorNote, FileTag, Input, PageHeader, RowsSkeleton } from "@/components/ui";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useDocuments } from "@/hooks/useDocuments";
 import { formatBytes, formatDateTime } from "@/lib/format";
@@ -73,16 +74,16 @@ export default function WorkspaceDetailPage() {
     }
   };
 
-  if (wsLoading) return <LoadingBlock />;
-  if (!workspace) return <EmptyState title="Workspace not found" action={<Link href="/workspaces" className="text-accent hover:underline">Back to workspaces</Link>} />;
+  if (wsLoading) return <RowsSkeleton rows={3} />;
+  if (!workspace) return <EmptyState title="Workspace not found" action={<Link href="/workspaces" className="font-medium underline decoration-ember decoration-2 underline-offset-4">Back to Workspaces</Link>} />;
 
   return (
     <>
-      <Link href="/workspaces" className="text-sm text-muted hover:text-fg">← Workspaces</Link>
+      <Link href="/workspaces" className="-ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-fg"><Icon name="back" className="h-4 w-4" /> Workspaces</Link>
       <div className="mt-2">
         <PageHeader
           title={workspace.name}
-          subtitle={meta ? `${meta.document_count} indexed documents · ${meta.vocabulary_size.toLocaleString()} distinct words · index v${meta.version}${meta.last_built_at ? ` (rebuilt ${formatDateTime(meta.last_built_at)})` : ""}` : undefined}
+          subtitle={meta ? `${meta.document_count} indexed ${meta.document_count === 1 ? "document" : "documents"}, ${meta.vocabulary_size.toLocaleString()} distinct words. Index v${meta.version}${meta.last_built_at ? `, rebuilt ${formatDateTime(meta.last_built_at)}` : ""}.` : undefined}
           action={
             <div className="flex gap-2">
               <Button
@@ -96,7 +97,7 @@ export default function WorkspaceDetailPage() {
               >
                 {rebuilding ? "Rebuilding…" : "Rebuild index"}
               </Button>
-              <Link href="/search" className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg hover:bg-accent-hover">Search this workspace</Link>
+              <Link href="/search" className="inline-flex items-center rounded-lg bg-ink px-4 py-2 text-sm font-medium text-ink-fg hover:opacity-90">Search this workspace</Link>
             </div>
           }
         />
@@ -106,20 +107,20 @@ export default function WorkspaceDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
         <aside>
-          <h2 className="mb-2 font-serif text-lg font-semibold">Folders</h2>
+          <h2 className="display mb-3 text-lg">Folders</h2>
           <nav aria-label="Folders" className="space-y-0.5">
             {[{ key: ALL, label: "All documents" }, { key: UNFILED, label: "Unfiled" }].map((o) => (
-              <button key={o.key} onClick={() => setSelected(o.key)} className={`block w-full rounded-lg px-3 py-1.5 text-left text-sm ${selected === o.key ? "bg-accent-soft text-accent" : "hover:bg-surface-2"}`}>
+              <button key={o.key} onClick={() => setSelected(o.key)} className={`block w-full rounded-lg px-3 py-1.5 text-left text-sm ${selected === o.key ? "bg-sunken font-semibold" : "text-muted hover:bg-sunken/70 hover:text-fg"}`}>
                 {o.label}
               </button>
             ))}
             {sortedFolders.map(({ f, path }) => (
-              <div key={f.id} className={`group flex items-center rounded-lg ${selected === f.id ? "bg-accent-soft" : "hover:bg-surface-2"}`}>
-                <button onClick={() => setSelected(f.id)} className={`min-w-0 flex-1 truncate px-3 py-1.5 text-left text-sm ${selected === f.id ? "text-accent" : ""}`} title={path}>
+              <div key={f.id} className={`group flex items-center rounded-lg ${selected === f.id ? "bg-sunken" : "hover:bg-sunken/70"}`}>
+                <button onClick={() => setSelected(f.id)} className={`min-w-0 flex-1 truncate px-3 py-1.5 text-left text-sm ${selected === f.id ? "font-semibold" : "text-muted"}`} title={path}>
                   {path}
                 </button>
                 <button
-                  className="px-1.5 text-xs text-muted hover:text-fg"
+                  className="px-1.5 text-xs text-faint hover:text-fg"
                   aria-label={`Rename ${f.name}`}
                   onClick={() => {
                     const n = prompt("Rename folder", f.name)?.trim();
@@ -157,7 +158,7 @@ export default function WorkspaceDetailPage() {
             }}
           >
             <Input label="New folder" name="folder" value={newFolder} onChange={(e) => setNewFolder(e.target.value)} placeholder="Folder name" maxLength={255} />
-            <select value={parent} onChange={(e) => setParent(e.target.value)} aria-label="Parent folder" className="w-full rounded-lg border border-line bg-surface px-2 py-1.5 text-sm">
+            <select value={parent} onChange={(e) => setParent(e.target.value)} aria-label="Parent folder" className="w-full rounded-lg border border-line bg-surface px-2 py-1.5 text-sm focus:border-ink">
               <option value="">Top level</option>
               {sortedFolders.map(({ f, path }) => <option key={f.id} value={f.id}>Inside: {path}</option>)}
             </select>
@@ -169,23 +170,25 @@ export default function WorkspaceDetailPage() {
           <UploadZone workspaceId={id} folderId={selected !== ALL && selected !== UNFILED ? selected : null} onUploaded={() => { void reload(); void loadSide(); }} />
           <div className="mt-6">
             {loading ? (
-              <LoadingBlock />
+              <RowsSkeleton rows={3} />
             ) : visible.length === 0 ? (
               <EmptyState title="No documents here" body="Upload files above, or pick another folder." />
             ) : (
-              <Card className="!p-0">
-                <ul className="divide-y divide-line">
+              <ul className="border-t border-line">
                   {visible.map((d) => (
-                    <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/documents/${d.id}`} className="block truncate font-medium hover:text-accent">{d.filename}</Link>
-                        <p className="text-xs text-muted">{formatBytes(d.file_size_bytes)}</p>
+                    <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line-soft py-3.5">
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <FileTag filename={d.filename} />
+                        <div className="min-w-0">
+                          <Link href={`/documents/${d.id}`} className="block truncate font-medium hover:text-ember-text">{d.filename}</Link>
+                          <p className="text-xs tabular-nums text-muted">{formatBytes(d.file_size_bytes)}</p>
+                        </div>
                       </div>
                       <select
                         value={d.folder_id ?? ""}
                         aria-label={`Folder for ${d.filename}`}
                         onChange={(e) => void act(() => documentService.move(id, d.id, e.target.value || null))}
-                        className="max-w-44 rounded-lg border border-line bg-surface px-2 py-1 text-xs"
+                        className="max-w-44 rounded-lg border border-line bg-surface px-2 py-1 text-xs focus:border-ink"
                       >
                         <option value="">Unfiled</option>
                         {sortedFolders.map(({ f, path }) => <option key={f.id} value={f.id}>{path}</option>)}
@@ -194,7 +197,6 @@ export default function WorkspaceDetailPage() {
                     </li>
                   ))}
                 </ul>
-              </Card>
             )}
           </div>
         </section>

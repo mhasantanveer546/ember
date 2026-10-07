@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { searchService } from "@/services/search";
 import { useDebounced } from "@/hooks/useDebounced";
+import { Icon } from "./Icon";
 
 interface Props {
   workspaceId: string | null;
@@ -10,10 +11,11 @@ interface Props {
   autoFocus?: boolean;
   onSubmit: (query: string) => void;
   loading?: boolean;
+  size?: "md" | "lg";
 }
 
-/** Search input with debounced prefix autocomplete (last word of the query). */
-export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit, loading }: Props) {
+/** Search input with debounced prefix autocomplete on the last word of the query. */
+export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit, loading, size = "lg" }: Props) {
   const [value, setValue] = useState(initialValue);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -33,7 +35,7 @@ export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit,
     searchService
       .autocomplete(workspaceId, lastWord, ctrl.signal)
       .then((s) => setSuggestions(s.filter((x) => x !== lastWord.toLowerCase())))
-      .catch(() => setSuggestions([])); // autocomplete is best-effort: never block searching
+      .catch(() => setSuggestions([])); // best-effort: autocomplete never blocks searching
     return () => ctrl.abort();
   }, [workspaceId, lastWord]);
 
@@ -62,10 +64,14 @@ export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit,
     onSubmit(q);
   };
 
+  const big = size === "lg";
+
   return (
     <div ref={wrapper} className="relative">
-      <div className="flex gap-2">
+      <div className={`flex items-center gap-2 rounded-2xl border border-line bg-surface pl-4 pr-2 shadow-sm focus-within:border-ember focus-within:ring-4 focus-within:ring-ember/15 ${big ? "py-2" : "py-1"}`}>
+        <Icon name="search" className={`shrink-0 text-faint ${big ? "h-5 w-5" : "h-[18px] w-[18px]"}`} />
         <input
+          data-search-input
           type="search"
           value={value}
           autoFocus={autoFocus}
@@ -87,36 +93,47 @@ export function SearchBox({ workspaceId, initialValue = "", autoFocus, onSubmit,
               else submit();
             } else if (e.key === "Escape") setOpen(false);
           }}
-          placeholder='Search your knowledge… try "exact phrase"'
-          aria-label="Search"
+          placeholder={big ? "A word, a half-remembered phrase…" : "Search…"}
+          aria-label="Search your documents"
           role="combobox"
           aria-expanded={open && suggestions.length > 0}
           aria-autocomplete="list"
           aria-controls="ember-suggestions"
           disabled={!workspaceId}
-          className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-base shadow-sm placeholder:text-muted focus:border-accent disabled:opacity-50"
+          className={`min-w-0 flex-1 bg-transparent outline-none placeholder:text-faint disabled:opacity-50 ${big ? "py-2 text-lg" : "py-1.5 text-base"}`}
         />
         <button
           onClick={submit}
           disabled={!workspaceId || !value.trim() || loading}
-          className="rounded-xl bg-accent px-5 text-sm font-medium text-accent-fg hover:bg-accent-hover disabled:opacity-50"
+          className={`shrink-0 rounded-xl bg-ink font-medium text-ink-fg hover:opacity-90 disabled:opacity-40 ${big ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-sm"}`}
         >
           Search
         </button>
       </div>
       {open && suggestions.length > 0 && (
-        <ul id="ember-suggestions" role="listbox" className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
-          {suggestions.map((s, i) => (
-            <li key={s} role="option" aria-selected={i === active}>
-              <button
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => applySuggestion(s)}
-                className={`block w-full px-4 py-2 text-left text-sm ${i === active ? "bg-accent-soft" : "hover:bg-surface-2"}`}
-              >
-                {s}
-              </button>
-            </li>
-          ))}
+        <ul id="ember-suggestions" role="listbox" className="absolute z-10 mt-2 w-full overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-pop">
+          {suggestions.map((s, i) => {
+            const prefix = lastWord.toLowerCase();
+            const hasPrefix = s.startsWith(prefix);
+            return (
+              <li key={s} role="option" aria-selected={i === active}>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => applySuggestion(s)}
+                  className={`block w-full rounded-lg px-3 py-2 text-left text-[15px] ${i === active ? "bg-sunken" : "hover:bg-sunken"}`}
+                >
+                  {hasPrefix ? (
+                    <>
+                      <span className="font-semibold">{s.slice(0, prefix.length)}</span>
+                      <span className="text-muted">{s.slice(prefix.length)}</span>
+                    </>
+                  ) : (
+                    s
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

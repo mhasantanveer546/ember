@@ -2,78 +2,163 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Ember design tokens: warm paper in light mode, charred wood in dark mode. */
+/*
+ * Ember design tokens.
+ * Light: "linen" (cool, slightly green paper).  Dark: "char" (warm graphite).
+ * Ink does the heavy lifting. The single accent, ember, is reserved for
+ * the places where knowledge is found: matched words, the active marker, the brand.
+ */
 :root {
-  --bg: #faf6f0;
-  --surface: #fffdf9;
-  --surface-2: #f3ece1;
-  --line: #e6dccd;
-  --fg: #2a2420;
-  --muted: #7a6e62;
-  --accent: #d9531e;
-  --accent-hover: #bf4515;
-  --accent-soft: #fbe6da;
-  --accent-fg: #ffffff;
-  --danger: #b42318;
-  --ok: #2f7d4f;
-  --warn: #a96a00;
+  --bg: #f1f0eb;
+  --surface: #f9f8f5;
+  --sunken: #e8e6df;
+  --line: #d6d3c9;
+  --line-soft: #e2e0d8;
+  --fg: #1f1e1b;
+  --muted: #67635a;
+  --faint: #969185;
+  --ink: #1f1e1b;
+  --ink-fg: #f9f8f5;
+  --ember: #e07a12;
+  --ember-text: #a54d08;
+  --glow: #ffdcab;
+  --glow-line: #e88a1f;
+  --on-ember: #1f1e1b;
+  --ok: #2c6e47;
+  --warn: #8f5b00;
+  --danger: #b3321f;
+  --shadow: 0 10px 30px -12px rgb(60 45 20 / 0.28);
 }
 
 .dark {
-  --bg: #16120f;
-  --surface: #1e1915;
-  --surface-2: #28211b;
-  --line: #3a3027;
-  --fg: #f2ebe2;
-  --muted: #a39585;
-  --accent: #ff7a3d;
-  --accent-hover: #ff9360;
-  --accent-soft: #3a2316;
-  --accent-fg: #1a0e07;
-  --danger: #ff8a7a;
+  --bg: #161513;
+  --surface: #1f1e1b;
+  --sunken: #11100f;
+  --line: #36342e;
+  --line-soft: #292723;
+  --fg: #edeae2;
+  --muted: #a09b8f;
+  --faint: #6f6b62;
+  --ink: #edeae2;
+  --ink-fg: #161513;
+  --ember: #ff9b3d;
+  --ember-text: #ffb468;
+  --glow: rgb(255 155 61 / 0.28);
+  --glow-line: #ff9b3d;
+  --on-ember: #161513;
   --ok: #6fcf97;
   --warn: #f2b45a;
+  --danger: #ff8a7a;
+  --shadow: 0 14px 34px -12px rgb(0 0 0 / 0.7);
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
+  --color-sunken: var(--sunken);
   --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-fg: var(--accent-fg);
-  --color-danger: var(--danger);
+  --color-faint: var(--faint);
+  --color-ink: var(--ink);
+  --color-ink-fg: var(--ink-fg);
+  --color-ember: var(--ember);
+  --color-ember-text: var(--ember-text);
+  --color-glow: var(--glow);
+  --color-on-ember: var(--on-ember);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --color-danger: var(--danger);
+  --font-sans: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Source Serif 4 Variable", ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --shadow-pop: var(--shadow);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+::selection {
+  background: var(--glow);
+}
+
+/* Headings are sans, heavy and tight. Content you wrote is serif (.passage). */
+.display {
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+/* Your own words: snippets and document text. */
+.passage {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+/* The one memorable moment: matched words kindle. */
 mark.hit {
-  background: var(--accent-soft);
-  color: var(--fg);
+  color: inherit;
+  background-color: var(--glow);
+  box-shadow: inset 0 -2px 0 var(--glow-line);
   border-radius: 3px;
-  padding: 0 2px;
-  box-shadow: inset 0 -2px 0 var(--accent);
+  padding: 0 0.14em;
+  margin: 0 -0.02em;
+  animation: kindle 700ms ease-out both;
+}
+.dark mark.hit {
+  text-shadow: 0 0 14px rgb(255 155 61 / 0.55);
 }
 mark.hit.active {
-  background: var(--accent);
-  color: var(--accent-fg);
+  background-color: var(--ember);
+  color: var(--on-ember);
   box-shadow: none;
+  text-shadow: none;
+  animation: none;
 }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+@keyframes kindle {
+  from {
+    background-color: transparent;
+    box-shadow: inset 0 -2px 0 transparent;
+    text-shadow: none;
+  }
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.06, 0.97) translateY(0.5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  mark.hit { animation: none; }
+  html { scroll-behavior: auto; }
+  .flicker { animation: none !important; }
+}
+
+/* In @layer base so component utilities like outline-none can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  button, a, select, input { transition: background-color 150ms, border-color 150ms, color 150ms, transform 150ms; }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  /* The browser's default blue clear button clashes with the palette. */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
 }

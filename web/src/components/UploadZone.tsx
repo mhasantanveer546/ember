@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { documentService } from "@/services/documents";
 import { fileExtension, formatBytes } from "@/lib/format";
+import { Icon } from "./Icon";
 
 const ALLOWED = ["pdf", "txt", "md", "docx"];
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -15,10 +16,10 @@ interface Item {
   message?: string;
 }
 
-/** Client-side checks are for fast feedback only; the backend re-validates everything. */
+/** Client-side checks give fast feedback only; the backend re-validates everything. */
 function precheck(file: File): string | null {
-  if (!ALLOWED.includes(fileExtension(file.name))) return "Unsupported type. Use PDF, TXT, MD or DOCX.";
-  if (file.size > MAX_BYTES) return `Too large (${formatBytes(file.size)}). Maximum is 25 MB.`;
+  if (!ALLOWED.includes(fileExtension(file.name))) return "Unsupported file type. Use PDF, TXT, Markdown or DOCX.";
+  if (file.size > MAX_BYTES) return `This file is ${formatBytes(file.size)}. The maximum is 25 MB.`;
   if (file.size === 0) return "This file is empty.";
   return null;
 }
@@ -47,7 +48,7 @@ export function UploadZone({
       if (problem) continue;
       try {
         const res = await documentService.upload(workspaceId, file, folderId, (f) => patch(id, { progress: f }));
-        patch(id, res.is_duplicate ? { state: "duplicate", progress: 1, message: "Already in this workspace" } : { state: "done", progress: 1 });
+        patch(id, res.is_duplicate ? { state: "duplicate", progress: 1, message: "Already in this workspace." } : { state: "done", progress: 1 });
         onUploaded();
       } catch (e) {
         patch(id, { state: "error", message: (e as Error).message });
@@ -68,16 +69,18 @@ export function UploadZone({
           setDragging(false);
           void handleFiles(e.dataTransfer.files);
         }}
-        className={`rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
-          dragging ? "border-accent bg-accent-soft" : "border-line bg-surface"
+        className={`flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-dashed px-6 py-5 ${
+          dragging ? "border-ember bg-glow" : "border-line hover:border-faint"
         }`}
       >
-        <p className="font-medium">Drop files here to add them to your knowledge</p>
-        <p className="mt-1 text-sm text-muted">PDF, TXT, Markdown or DOCX, up to 25 MB each</p>
-        <button
-          onClick={() => input.current?.click()}
-          className="mt-4 rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
-        >
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sunken text-muted">
+          <Icon name="upload" className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">Drop files here to add them</p>
+          <p className="text-sm text-muted">PDF, text, Markdown or Word, up to 25 MB each.</p>
+        </div>
+        <button onClick={() => input.current?.click()} className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-ink-fg hover:opacity-90">
           Choose files
         </button>
         <input
@@ -94,12 +97,12 @@ export function UploadZone({
       </div>
 
       {items.length > 0 && (
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-3 divide-y divide-line-soft text-sm">
           {items.slice(0, 6).map((i) => (
-            <li key={i.id} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm">
+            <li key={i.id} className="py-2.5">
               <div className="flex items-center justify-between gap-3">
-                <span className="truncate">{i.name}</span>
-                <span className={i.state === "error" ? "text-danger" : i.state === "done" ? "text-ok" : "text-muted"}>
+                <span className="truncate font-medium">{i.name}</span>
+                <span className={`shrink-0 tabular-nums ${i.state === "error" ? "text-danger" : i.state === "done" ? "text-ok" : "text-muted"}`}>
                   {i.state === "uploading" && `${Math.round(i.progress * 100)}%`}
                   {i.state === "done" && "Uploaded"}
                   {i.state === "duplicate" && "Duplicate"}
@@ -107,11 +110,11 @@ export function UploadZone({
                 </span>
               </div>
               {i.state === "uploading" && (
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
-                  <div className="h-full bg-accent transition-all" style={{ width: `${i.progress * 100}%` }} />
+                <div className="mt-2 h-1 overflow-hidden rounded-full bg-sunken">
+                  <div className="h-full origin-left bg-ember transition-[width]" style={{ width: `${i.progress * 100}%` }} />
                 </div>
               )}
-              {i.message && <p className={`mt-1 text-xs ${i.state === "error" ? "text-danger" : "text-muted"}`}>{i.message}</p>}
+              {i.message && <p className={`mt-1 text-[13px] ${i.state === "error" ? "text-danger" : "text-muted"}`}>{i.message}</p>}
             </li>
           ))}
         </ul>

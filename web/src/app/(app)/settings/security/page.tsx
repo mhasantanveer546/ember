@@ -1,17 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 
 export default function SecuritySettings() {
   const { logout } = useAuth();
   const router = useRouter();
   return (
-    <div className="max-w-xl space-y-4">
-      <Card>
-        <h2 className="font-serif text-lg font-semibold">Session</h2>
-        <p className="mt-1 text-sm text-muted">Signing out ends this session and invalidates its token on the server.</p>
+    <div className="max-w-lg divide-y divide-line-soft border-y border-line-soft">
+      <section className="py-6">
+        <h2 className="display text-lg">Sign out</h2>
+        <p className="mt-1 text-muted">Ends this session and invalidates its sign-in token on the server.</p>
         <Button
           variant="secondary"
           className="mt-4"
@@ -22,11 +22,11 @@ export default function SecuritySettings() {
         >
           Sign out
         </Button>
-      </Card>
-      <Card>
-        <h2 className="font-serif text-lg font-semibold">Password</h2>
-        <p className="mt-1 text-sm text-muted">Changing your password from here isn&apos;t available yet. It needs a backend endpoint that is planned for the security-hardening phase.</p>
-      </Card>
+      </section>
+      <section className="py-6">
+        <h2 className="display text-lg">Password</h2>
+        <p className="mt-1 text-muted">Changing your password here isn’t available yet. It needs a backend endpoint that is planned for the security-hardening phase.</p>
+      </section>
     </div>
   );
 }

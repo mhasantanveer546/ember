@@ -3,20 +3,28 @@
 import { useTheme } from "@/context/ThemeContext";
 import type { ThemePreference } from "@/services/settings";
 
-const order: ThemePreference[] = ["system", "light", "dark"];
-const labels: Record<ThemePreference, string> = { system: "Auto", light: "Light", dark: "Dark" };
+const OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: "system", label: "Auto" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
+/** Three-way segmented control (not the usual sun/moon switch). */
 export function ThemeToggle() {
   const { preferences, setTheme } = useTheme();
-  const next = order[(order.indexOf(preferences.theme) + 1) % order.length];
   return (
-    <button
-      onClick={() => setTheme(next)}
-      className="rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium hover:bg-surface-2"
-      aria-label={`Theme: ${labels[preferences.theme]}. Switch to ${labels[next]}`}
-      title="Switch theme"
-    >
-      {labels[preferences.theme]}
-    </button>
+    <div role="radiogroup" aria-label="Theme" className="inline-flex rounded-lg bg-sunken p-0.5 text-xs font-medium">
+      {OPTIONS.map((o) => (
+        <button
+          key={o.value}
+          role="radio"
+          aria-checked={preferences.theme === o.value}
+          onClick={() => setTheme(o.value)}
+          className={`rounded-md px-2.5 py-1 ${preferences.theme === o.value ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg"}`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }

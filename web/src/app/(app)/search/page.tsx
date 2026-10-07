@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { SearchBox } from "@/components/SearchBox";
 import { Snippet } from "@/components/Snippet";
-import { Card, EmptyState, ErrorNote, LoadingBlock, PageHeader } from "@/components/ui";
+import { EmptyState, ErrorNote, FileTag, PageHeader, RowsSkeleton } from "@/components/ui";
 import { useTheme } from "@/context/ThemeContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fileExtension } from "@/lib/format";
@@ -51,9 +51,9 @@ function SearchView() {
     [workspaceId, limit],
   );
 
-  // Search whenever the URL's ?q changes (covers deep links, history clicks, back/forward).
+  // The URL's ?q is the source of truth, so deep links, history clicks and back/forward all work.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- URL is the source of truth for the query
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- run the search for the URL's query
     if (urlQuery) void runSearch(urlQuery);
     else setResponse(null);
   }, [urlQuery, runSearch]);
@@ -65,9 +65,9 @@ function SearchView() {
 
   const submit = (q: string) => router.push(`/search?q=${encodeURIComponent(q)}`);
 
-  if (wsLoading) return <LoadingBlock />;
+  if (wsLoading) return <RowsSkeleton rows={3} />;
   if (!current) {
-    return <EmptyState title="Create a workspace first" body="Search works inside a workspace." action={<Link href="/workspaces" className="text-accent hover:underline">Go to workspaces</Link>} />;
+    return <EmptyState title="Create a workspace first" body="Search works inside a workspace." action={<Link href="/workspaces" className="font-medium underline decoration-ember decoration-2 underline-offset-4">Go to Workspaces</Link>} />;
   }
 
   const types = response ? Array.from(new Set(response.results.map((r) => fileExtension(r.filename)).filter(Boolean))) : [];
@@ -75,66 +75,80 @@ function SearchView() {
 
   return (
     <>
-      <PageHeader title="Search" subtitle={`Searching in ${current.name}`} />
+      <PageHeader title="Search" subtitle={`In ${current.name}`} />
       <SearchBox key={urlQuery} workspaceId={workspaceId} initialValue={urlQuery} autoFocus onSubmit={submit} loading={loading} />
 
       {error && (
-        <div className="mt-6">
+        <div className="mt-8">
           <ErrorNote message={error} onRetry={() => runSearch(urlQuery)} />
         </div>
       )}
 
-      {loading && !response && <LoadingBlock label="Searching…" />}
+      {loading && !response && (
+        <div className="mt-8">
+          <RowsSkeleton rows={4} />
+        </div>
+      )}
 
       {!urlQuery && !loading && (
-        <div className="mt-8">
+        <div className="mt-10">
           {history.length > 0 ? (
-            <>
-              <h2 className="mb-2 text-sm font-medium text-muted">Recent searches</h2>
-              <div className="flex flex-wrap gap-2">
+            <section aria-labelledby="recent">
+              <h2 id="recent" className="display mb-3 text-lg">Recent searches</h2>
+              <ul className="divide-y divide-line-soft border-y border-line-soft">
                 {history.map((h) => (
-                  <button key={h.id} onClick={() => submit(h.query_text)} className="rounded-full border border-line bg-surface px-3 py-1 text-sm hover:bg-surface-2">
-                    {h.query_text}
-                  </button>
+                  <li key={h.id}>
+                    <button onClick={() => submit(h.query_text)} className="block w-full py-2.5 text-left hover:text-ember-text">
+                      {h.query_text}
+                    </button>
+                  </li>
                 ))}
-              </div>
-            </>
+              </ul>
+            </section>
           ) : (
-            <EmptyState title="Search everything you've saved" body='Type a word or phrase you remember. Use quotes for an exact phrase, like "database normalization".' />
+            <EmptyState title="Search everything you’ve saved" body="Type a word or phrase you remember. Put quotes around words to find an exact phrase, like “database normalization”." />
           )}
         </div>
       )}
 
       {response && !error && (
-        <section className={`mt-6 transition-opacity ${loading ? "opacity-60" : ""}`} aria-live="polite">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-muted">
-              {shown.length} {shown.length === 1 ? "result" : "results"}
-              {response.is_phrase_search && " · exact phrase"}
-            </p>
+        <section className={`mt-10 transition-opacity ${loading ? "opacity-50" : ""}`} aria-live="polite">
+          <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-3">
+            <h2 className="text-[15px]">
+              <span className="font-semibold tabular-nums">{shown.length}</span> {shown.length === 1 ? "result" : "results"} for{" "}
+              <span className="font-semibold">{response.query}</span>
+              {response.is_phrase_search && <span className="text-muted"> (exact phrase)</span>}
+            </h2>
             {types.length > 1 && (
-              <div className="flex gap-1.5" role="group" aria-label="Filter by file type">
-                <button onClick={() => setTypeFilter(null)} className={`rounded-full border px-2.5 py-0.5 text-xs ${!typeFilter ? "border-accent bg-accent-soft text-accent" : "border-line"}`}>All</button>
-                {types.map((t) => (
-                  <button key={t} onClick={() => setTypeFilter(t)} className={`rounded-full border px-2.5 py-0.5 text-xs uppercase ${typeFilter === t ? "border-accent bg-accent-soft text-accent" : "border-line"}`}>{t}</button>
+              <div className="flex gap-4 text-sm" role="group" aria-label="Filter by file type">
+                {[null, ...types].map((t) => (
+                  <button
+                    key={t ?? "all"}
+                    onClick={() => setTypeFilter(t)}
+                    aria-pressed={typeFilter === t}
+                    className={`-mb-[13px] border-b-2 pb-3 ${typeFilter === t ? "border-ember font-semibold text-fg" : "border-transparent text-muted hover:text-fg"}`}
+                  >
+                    {t ? `.${t}` : "All"}
+                  </button>
                 ))}
               </div>
             )}
           </div>
 
           {shown.length === 0 ? (
-            <EmptyState title="No matches" body="Try fewer or different words. Only documents that are Ready can be searched." />
+            <EmptyState title="No matches" body="Try fewer or different words, or check the spelling. Only documents marked Ready can be searched." />
           ) : (
-            <ul className="space-y-3">
+            <ul>
               {shown.map((r) => (
-                <li key={r.document_id}>
-                  <Link href={`/documents/${r.document_id}?q=${encodeURIComponent(response.query)}`} className="block">
-                    <Card className="transition-colors hover:border-accent">
-                      <p className="font-medium text-accent">{r.filename}</p>
-                      <p className="mt-1.5 text-sm leading-relaxed">
-                        <Snippet snippet={r.snippet} />
-                      </p>
-                    </Card>
+                <li key={r.document_id} className="border-b border-line-soft">
+                  <Link href={`/documents/${r.document_id}?q=${encodeURIComponent(response.query)}`} className="group -mx-4 block rounded-xl px-4 py-5 hover:bg-sunken/60">
+                    <p className="mb-2 flex items-center gap-2 text-sm font-medium text-muted group-hover:text-fg">
+                      <FileTag filename={r.filename} />
+                      <span className="truncate">{r.filename}</span>
+                    </p>
+                    <p className="passage max-w-[68ch]">
+                      <Snippet snippet={r.snippet} />
+                    </p>
                   </Link>
                 </li>
               ))}
@@ -148,7 +162,7 @@ function SearchView() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<LoadingBlock />}>
+    <Suspense fallback={<RowsSkeleton rows={3} />}>
       <SearchView />
     </Suspense>
   );
