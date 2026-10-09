@@ -84,4 +84,5 @@ RQ expects, no virtualization required.
 - [x] Phase 5 — web application (Next.js: auth, dashboard, search, documents, workspaces/folders, settings)
 - [x] Phase 6 — web <-> backend integration (services layer, token refresh, error handling, status polling)
 - [x] Deployment prep — Dockerfile, render.yaml, S3 storage backend, production config checks, registration switch (docs/DEPLOYMENT.md)
-- [ ] Phase 7+ — mobile, hardening, cloud, CI/CD, observability, AI/RAG
+- [x] Phase 7 — mobile app (Expo): auth, home, search, knowledge + upload, document reader, history, workspaces, profile (docs/MOBILE.md)
+- [ ] Phase 8+ — security hardening, cloud, CI/CD, observability, AI/RAG
