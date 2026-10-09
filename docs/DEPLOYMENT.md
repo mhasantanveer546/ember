@@ -80,3 +80,18 @@ lets anyone create accounts and use your storage and quotas.
 ## Later (Phases 9-10)
 Cloud Run + Cloud SQL + Cloud Storage + Secret Manager, GitHub Actions CI/CD, and a real background worker once you move off the free plan
 (set `RUN_JOBS_INLINE=false` and run `python backend/scripts/run_worker.py` as a second service).
+
+## No-card alternative: Hugging Face Spaces (backend)
+
+Render now asks for a card. A free Docker Space does not.
+
+1. huggingface.co -> New Space -> SDK **Docker** (Blank), visibility Public or Private. Name it e.g. `ember-api`.
+2. Settings -> Variables and secrets: add the same variables as the Render list
+   (`ENVIRONMENT=production`, `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `CORS_ORIGINS`,
+   `RUN_JOBS_INLINE=true`, `STORAGE_BACKEND=s3`, `S3_*`). Put secrets under *Secrets*.
+3. From the repo root: `deploy/huggingface/publish.sh <hf-user>/ember-api`
+   (password = a HF access token with write scope).
+4. API URL: `https://<hf-user>-ember-api.hf.space` (check `/health`).
+   Use it as `NEXT_PUBLIC_API_URL` in Vercel and `--api` in the smoke test.
+
+Free Spaces sleep after ~48h idle and wake on the next request (~1 min).
