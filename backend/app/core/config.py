@@ -59,6 +59,17 @@ class Settings(BaseSettings):
     # strangers can't create accounts (and consume your storage/quota).
     allow_registration: bool = True
 
+    # --- Phase 8: hardening ---
+    # Fixed-window rate limiting backed by Redis. Fails open if Redis is down.
+    rate_limit_enabled: bool = True
+    # Only trust X-Forwarded-For when the API sits behind a proxy you control
+    # (Render, Hugging Face, Cloud Run). If left false behind a proxy every
+    # client looks like the proxy's IP; if true without a proxy clients can
+    # spoof their IP and dodge the limiter.
+    trust_proxy_headers: bool = False
+    # Swagger/OpenAPI endpoints. Unset = on in development, off in production.
+    enable_docs: bool | None = None
+
     @model_validator(mode="after")
     def _check_production_safety(self) -> "Settings":
         if self.storage_backend not in ("local", "s3"):
@@ -70,6 +81,8 @@ class Settings(BaseSettings):
         if self.environment == "production":
             if len(self.jwt_secret) < 32:
                 raise ValueError("In production JWT_SECRET must be at least 32 characters")
+            if self.jwt_secret.lower().startswith(("change", "test", "secret", "dev")):
+                raise ValueError("In production JWT_SECRET looks like a placeholder; generate a random one")
             if "localhost" in self.cors_origins:
                 raise ValueError("In production CORS_ORIGINS must list your real web origin(s), not localhost")
         return self

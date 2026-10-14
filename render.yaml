@@ -23,6 +23,8 @@ services:
         sync: false
       - key: RUN_JOBS_INLINE       # free plan has no background worker: process uploads in the API
         value: "true"
+      - key: TRUST_PROXY_HEADERS   # behind Render's proxy: use X-Forwarded-For for per-client rate limits
+        value: "true"
       - key: STORAGE_BACKEND
         value: s3
       - key: S3_ENDPOINT_URL

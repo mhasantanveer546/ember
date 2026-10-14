@@ -26,6 +26,13 @@ import jwt
 from app.core.config import settings
 
 
+MAX_PASSWORD_BYTES = 72  # bcrypt ignores (or, in bcrypt>=5, rejects) anything longer
+
+
+def password_too_long(password: str) -> bool:
+    return len(password.encode("utf-8")) > MAX_PASSWORD_BYTES
+
+
 def hash_password(password: str) -> str:
     """
     One-way bcrypt hash. Includes a random salt automatically (bcrypt.gensalt()),
@@ -39,7 +46,22 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Check a plaintext password against a stored bcrypt hash."""
-    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    if password_too_long(plain_password):
+        return False  # can never match a hash we created; avoids a bcrypt ValueError (500)
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except ValueError:
+        return False
+
+
+# A real bcrypt hash of a random value, computed once. Login verifies against it
+# when the email is unknown so "no such user" costs the same ~100ms as "wrong
+# password" — otherwise response time reveals which emails are registered.
+_DUMMY_HASH = bcrypt.hashpw(uuid.uuid4().hex.encode(), bcrypt.gensalt()).decode()
+
+
+def burn_password_check(plain_password: str) -> None:
+    verify_password(plain_password, _DUMMY_HASH)
 
 
 class TokenError(Exception):
@@ -85,11 +107,21 @@ def decode_token(token: str, expected_type: str) -> dict[str, Any]:
     wrong type — the caller shouldn't need to know which.
     """
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+            options={"require": ["exp", "iat", "sub", "jti", "type"]},
+        )
     except jwt.ExpiredSignatureError as exc:
         raise TokenError("Token has expired") from exc
     except jwt.InvalidTokenError as exc:
         raise TokenError("Invalid token") from exc
+
+    try:
+        uuid.UUID(str(payload["sub"]))
+    except ValueError as exc:
+        raise TokenError("Invalid token subject") from exc
 
     if payload.get("type") != expected_type:
         raise TokenError(f"Expected a {expected_type} token, got {payload.get('type')!r}")

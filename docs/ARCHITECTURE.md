@@ -85,4 +85,5 @@ RQ expects, no virtualization required.
 - [x] Phase 6 — web <-> backend integration (services layer, token refresh, error handling, status polling)
 - [x] Deployment prep — Dockerfile, render.yaml, S3 storage backend, production config checks, registration switch (docs/DEPLOYMENT.md)
 - [x] Phase 7 — mobile app (Expo): auth, home, search, knowledge + upload, document reader, history, workspaces, profile (docs/MOBILE.md)
-- [ ] Phase 8+ — security hardening, cloud, CI/CD, observability, AI/RAG
+- [x] Phase 8 — security hardening: rate limits, auth fixes, upload bomb/filename checks, headers (docs/SECURITY.md)
+- [ ] Phase 9+ — cloud, CI/CD, observability, AI/RAG

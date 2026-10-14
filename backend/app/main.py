@@ -19,9 +19,23 @@ from app.api.index import router as index_router
 from app.api.search import router as search_router
 from app.api.workspaces import router as workspaces_router
 from app.core.config import settings
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.db.session import get_db
 
-app = FastAPI(title="Ember API", version="0.1.0")
+# Interactive docs are handy in development but expose the full API surface;
+# turn them off in production unless ENABLE_DOCS=true.
+_docs_on = settings.enable_docs if settings.enable_docs is not None else settings.environment != "production"
+app = FastAPI(
+    title="Ember API",
+    version="0.1.0",
+    docs_url="/docs" if _docs_on else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if _docs_on else None,
+)
+
+# Added BEFORE CORS so CORS is the outer layer: even a 413 from the size
+# guard then carries CORS headers and the browser can read the error.
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Explicit origin allow-list (never "*" with credentials). Bearer tokens
 # travel in the Authorization header, so cookies/credentials aren't needed.

@@ -21,6 +21,11 @@ MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024  # 25 MB
 _PDF_MAGIC_BYTES = b"%PDF-"
 _ZIP_MAGIC_BYTES = b"PK\x03\x04"
 _DOCX_REQUIRED_ENTRY = "word/document.xml"
+# A DOCX is a ZIP; a few KB of zeros can inflate to gigabytes ("zip bomb") and
+# exhaust memory during extraction. Bound what we are willing to inflate.
+_MAX_ZIP_ENTRIES = 5_000
+_MAX_UNCOMPRESSED_BYTES = 200 * 1024 * 1024
+_MAX_COMPRESSION_RATIO = 200
 
 
 class FileValidationError(Exception):
@@ -62,6 +67,14 @@ def _validate_docx(content: bytes) -> None:
     # documents is actually present.
     try:
         with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            infos = archive.infolist()
+            if len(infos) > _MAX_ZIP_ENTRIES:
+                raise FileValidationError("Word document has too many internal files.")
+            total = sum(i.file_size for i in infos)
+            if total > _MAX_UNCOMPRESSED_BYTES or total > _MAX_COMPRESSION_RATIO * max(len(content), 1):
+                raise FileValidationError("Word document expands to an unsafe size and was rejected.")
+            if any(i.filename.startswith(("/", "..")) or ".." in i.filename.split("/") for i in infos):
+                raise FileValidationError("Word document contains unsafe internal paths.")
             if _DOCX_REQUIRED_ENTRY not in archive.namelist():
                 raise FileValidationError(
                     "File has a .docx extension but is not a valid Word document "
@@ -84,6 +97,24 @@ def _validate_text_like(content: bytes) -> None:
         raise FileValidationError(
             "File claims to be plain text but is not valid UTF-8."
         ) from exc
+
+
+def sanitize_filename(filename: str | None) -> str:
+    """
+    Reduce a client-supplied filename to a safe display name. It is never used
+    as a storage path (keys are built from UUIDs) but it IS echoed back to
+    browsers and stored, so strip directories, control characters and
+    bidi-override tricks, and bound the length.
+    """
+    name = (filename or "").replace("\\", "/").rsplit("/", 1)[-1]
+    name = "".join(
+        ch for ch in name
+        if ch.isprintable() and ch not in "\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+    ).strip().strip(".")
+    if len(name) > 200:
+        stem, dot, ext = name.rpartition(".")
+        name = (stem[: 195 - len(ext)] + dot + ext) if dot else name[:200]
+    return name or "untitled"
 
 
 def validate_upload(filename: str, content: bytes) -> str:

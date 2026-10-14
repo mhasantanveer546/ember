@@ -21,7 +21,7 @@ ember/
 
 ## Status
 
-Phases 0–7 complete (search engine, backend, document pipeline, search API, web app, mobile app). Next: Phase 8 security hardening; deployment guide ready. To run and test everything locally, see `docs/RUNNING.md`.
+Phases 0–8 complete (search engine, backend, document pipeline, search API, web app, mobile app, security hardening — see `docs/SECURITY.md`). Next: Phase 9 cloud deployment; a free deployment guide is ready in `docs/DEPLOYMENT.md`. To run and test everything locally, see `docs/RUNNING.md`.
 
 ## Stack decisions
 

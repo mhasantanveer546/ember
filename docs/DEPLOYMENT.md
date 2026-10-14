@@ -87,7 +87,7 @@ Render now asks for a card. A free Docker Space does not.
 
 1. huggingface.co -> New Space -> SDK **Docker** (Blank), visibility Public or Private. Name it e.g. `ember-api`.
 2. Settings -> Variables and secrets: add the same variables as the Render list
-   (`ENVIRONMENT=production`, `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `CORS_ORIGINS`,
+   (`ENVIRONMENT=production`, `TRUST_PROXY_HEADERS=true`, `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `CORS_ORIGINS`,
    `RUN_JOBS_INLINE=true`, `STORAGE_BACKEND=s3`, `S3_*`). Put secrets under *Secrets*.
 3. From the repo root: `deploy/huggingface/publish.sh <hf-user>/ember-api`
    (password = a HF access token with write scope).

@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_owned_document, get_owned_workspace
 from app.core.queue import get_queue
+from app.core.rate_limit import rate_limit
 from app.db.session import get_db
 from app.models import Document, DocumentStatus, Folder, Workspace
 from app.schemas.document import (
@@ -27,7 +28,12 @@ from app.schemas.document import (
 from app.services.duplicate_detection import find_duplicate_document
 from app.services.extraction.extraction_service import extract_text
 from app.services.search.index_registry import get_or_create_workspace_index
-from app.services.file_validation import FileValidationError, validate_upload
+from app.services.file_validation import (
+    MAX_FILE_SIZE_BYTES,
+    FileValidationError,
+    sanitize_filename,
+    validate_upload,
+)
 from app.services.hashing import compute_content_hash
 from app.services.storage.local_storage import get_storage_service
 from app.workers.document_processing import process_document
@@ -44,7 +50,12 @@ def _require_folder_in_workspace(db: Session, workspace: Workspace, folder_id: u
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
 
 
-@router.post("", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=DocumentUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("upload", 60, 60))],
+)
 async def upload_document(
     file: UploadFile = File(...),
     folder_id: uuid.UUID | None = Form(default=None),
@@ -53,10 +64,13 @@ async def upload_document(
     queue: Queue = Depends(get_queue),
 ) -> DocumentUploadResponse:
     _require_folder_in_workspace(db, workspace, folder_id)
-    content = await file.read()
+    # Read one byte past the limit so an oversized body is rejected without
+    # ever holding more than ~25 MB (Content-Length can be absent or a lie).
+    content = await file.read(MAX_FILE_SIZE_BYTES + 1)
+    filename = sanitize_filename(file.filename)
 
     try:
-        file_kind = validate_upload(file.filename, content)
+        file_kind = validate_upload(filename, content)
     except FileValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -70,7 +84,7 @@ async def upload_document(
         workspace_id=workspace.id,
         folder_id=folder_id,
         owner_id=workspace.owner_id,
-        filename=file.filename,
+        filename=filename,
         storage_key="",  # filled in below, once the document's own ID is known
         content_hash=content_hash,
         mime_type=file.content_type or "application/octet-stream",

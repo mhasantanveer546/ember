@@ -46,15 +46,10 @@ def get_current_user(
     except security.TokenError as exc:
         raise credentials_exception from exc
 
-    jti = payload.get("jti")
-    if jti and is_denylisted(redis_client, jti):
+    if is_denylisted(redis_client, payload["jti"]):
         raise credentials_exception
 
-    user_id_str = payload.get("sub")
-    if user_id_str is None:
-        raise credentials_exception
-
-    user = db.get(User, uuid.UUID(user_id_str))
+    user = db.get(User, uuid.UUID(payload["sub"]))
     if user is None:
         raise credentials_exception
 

@@ -7,6 +7,8 @@ Ember Backend — Search Routes (Phase 4)
 """
 
 from fastapi import APIRouter, Depends, Query
+
+from app.core.rate_limit import rate_limit
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_owned_workspace
@@ -24,7 +26,7 @@ from app.services.search.rebuild_service import ensure_index_fresh
 from app.services.search.search_service import search_workspace
 from app.services.search.trie_registry import get_or_create_workspace_trie
 
-router = APIRouter(prefix="/workspaces/{workspace_id}/search", tags=["search"])
+router = APIRouter(prefix="/workspaces/{workspace_id}/search", tags=["search"], dependencies=[Depends(rate_limit("search", 240, 60))])
 
 
 @router.post("", response_model=SearchResponse)

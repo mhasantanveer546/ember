@@ -10,7 +10,8 @@ export const authService = {
   },
   async logout(): Promise<void> {
     try {
-      await request<void>("/auth/logout", { method: "POST" });
+      const refresh_token = await tokenStore.getRefresh();
+      await request<void>("/auth/logout", { method: "POST", body: refresh_token ? { refresh_token } : undefined });
     } catch {
       /* the local session is cleared regardless */
     } finally {
