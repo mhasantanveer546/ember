@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     # client looks like the proxy's IP; if true without a proxy clients can
     # spoof their IP and dodge the limiter.
     trust_proxy_headers: bool = False
+    # --- Phase 11: observability ---
+    log_level: str = "INFO"
+    log_json: bool | None = None  # None = JSON in production, readable text otherwise
+    sentry_dsn: str = ""  # optional; also `pip install sentry-sdk`
+    metrics_token: str = ""  # bearer token for GET /metrics (required in production)
+
     # Swagger/OpenAPI endpoints. Unset = on in development, off in production.
     enable_docs: bool | None = None
 

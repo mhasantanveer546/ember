@@ -21,7 +21,7 @@ ember/
 
 ## Status
 
-Phases 0–10 built (search engine, backend, document pipeline, search API, web, mobile, security hardening, GCP deploy scripts, CI — see `docs/SECURITY.md`, `docs/GCP.md`). Cloud scripts are untested against a real GCP project. Next: Phase 11 observability. Free deployment guide: `docs/DEPLOYMENT.md`. Local run/test: `docs/RUNNING.md`.
+Phases 0–11 built (search engine, backend, document pipeline, search API, web, mobile, security `docs/SECURITY.md`, GCP + CI `docs/GCP.md`, observability `docs/OBSERVABILITY.md`). Cloud scripts are untested against a real GCP project. Next: Phase 12 AI/RAG. Free deployment guide: `docs/DEPLOYMENT.md`. Local run/test: `docs/RUNNING.md`.
 
 ## Stack decisions
 

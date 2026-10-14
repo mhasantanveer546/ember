@@ -15,6 +15,7 @@ from rq import Queue
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_owned_document, get_owned_workspace
+from app.core import metrics
 from app.core.queue import get_queue
 from app.core.rate_limit import rate_limit
 from app.db.session import get_db
@@ -72,12 +73,14 @@ async def upload_document(
     try:
         file_kind = validate_upload(filename, content)
     except FileValidationError as exc:
+        metrics.inc("ember_upload_failures_total", {"reason": "validation"})
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     content_hash = compute_content_hash(content)
 
     existing_document = find_duplicate_document(db, workspace.id, content_hash)
     if existing_document is not None:
+        metrics.inc("ember_uploads_total", {"outcome": "duplicate"})
         return DocumentUploadResponse(document=existing_document, is_duplicate=True)
 
     document = Document(
@@ -101,7 +104,14 @@ async def upload_document(
     db.refresh(document)
 
     storage = get_storage_service()
-    storage.save(storage_key, content)
+    try:
+        storage.save(storage_key, content)
+    except Exception:
+        metrics.inc("ember_upload_failures_total", {"reason": "storage"})
+        document.status = DocumentStatus.FAILED
+        db.commit()
+        raise
+    metrics.inc("ember_uploads_total", {"outcome": "accepted"})
 
     # Fast path ends here — everything else happens in the worker.
     queue.enqueue(process_document, str(document.id))

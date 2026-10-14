@@ -10,10 +10,12 @@ search down for documents that were working a moment ago.
 """
 
 import uuid
+import time
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.core import metrics
 from app.models import Document, DocumentStatus, IndexMetadata
 from app.services.search.index_builder import RebuildResult, rebuild_workspace_index
 from app.services.search.index_registry import (
@@ -56,8 +58,15 @@ def rebuild_and_swap(db: Session, workspace_id: uuid.UUID) -> RebuildResult:
         .count()
     )
 
-    result = rebuild_workspace_index(db, workspace_id)
-    _validate_rebuild(result, ready_document_count)
+    started = time.perf_counter()
+    try:
+        result = rebuild_workspace_index(db, workspace_id)
+        _validate_rebuild(result, ready_document_count)
+    except Exception:
+        metrics.inc("ember_index_rebuilds_total", {"outcome": "failed"})
+        raise
+    metrics.observe("ember_index_rebuild_seconds", time.perf_counter() - started)
+    metrics.inc("ember_index_rebuilds_total", {"outcome": "ok"})
 
     swap_workspace_index(workspace_id, result.index)
     swap_workspace_trie(workspace_id, result.trie)

@@ -87,4 +87,5 @@ RQ expects, no virtualization required.
 - [x] Phase 7 — mobile app (Expo): auth, home, search, knowledge + upload, document reader, history, workspaces, profile (docs/MOBILE.md)
 - [x] Phase 8 — security hardening: rate limits, auth fixes, upload bomb/filename checks, headers (docs/SECURITY.md)
 - [x] Phase 9–10 — GCS storage backend, Cloud Run/Secret Manager scripts, GitHub Actions CI + deploy (docs/GCP.md; scripts not yet run on a real project)
-- [ ] Phase 11+ — observability, AI/RAG, advanced search, production hardening
+- [x] Phase 11 — structured logs, request IDs, /metrics (latency P50/P95/P99, indexing, uploads, extraction, worker failures), optional Sentry (docs/OBSERVABILITY.md)
+- [ ] Phase 12+ — AI/RAG, advanced search, production hardening

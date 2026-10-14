@@ -7,7 +7,9 @@ Run locally with:
 Interactive docs available at /docs once running.
 """
 
-from fastapi import Depends, FastAPI
+import json
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -18,9 +20,18 @@ from app.api.folders import router as folders_router
 from app.api.index import router as index_router
 from app.api.search import router as search_router
 from app.api.workspaces import router as workspaces_router
+from app.core import metrics
 from app.core.config import settings
+from app.core.logging_config import configure_logging, init_error_tracking
+from app.core.observability import RequestContextMiddleware, metrics_authorized
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.db.session import get_db
+
+configure_logging(
+    settings.log_level,
+    json_logs=settings.log_json if settings.log_json is not None else settings.environment == "production",
+)
+init_error_tracking(settings.sentry_dsn, settings.environment)
 
 # Interactive docs are handy in development but expose the full API surface;
 # turn them off in production unless ENABLE_DOCS=true.
@@ -36,6 +47,8 @@ app = FastAPI(
 # Added BEFORE CORS so CORS is the outer layer: even a 413 from the size
 # guard then carries CORS headers and the browser can read the error.
 app.add_middleware(SecurityHeadersMiddleware)
+# Between security headers and CORS: sees every request, and its 500s still get CORS headers.
+app.add_middleware(RequestContextMiddleware)
 
 # Explicit origin allow-list (never "*" with credentials). Bearer tokens
 # travel in the Authorization header, so cookies/credentials aren't needed.
@@ -71,3 +84,12 @@ def health_check_db(db: Session = Depends(get_db)) -> dict[str, str]:
     """
     db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "connected"}
+
+@app.get("/metrics", include_in_schema=False)
+def metrics_endpoint(format: str = "prometheus", authorization: str | None = Header(default=None)) -> Response:
+    if not metrics_authorized(authorization, settings.metrics_token, settings.environment):
+        # 404, not 401: don't advertise that the endpoint exists to anonymous callers.
+        raise HTTPException(status_code=404, detail="Not found")
+    if format == "json":
+        return Response(json.dumps(metrics.snapshot()), media_type="application/json")
+    return Response(metrics.render_prometheus(), media_type="text/plain; version=0.0.4")

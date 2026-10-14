@@ -8,6 +8,9 @@ Ember Backend — Search Routes (Phase 4)
 
 from fastapi import APIRouter, Depends, Query
 
+import time
+
+from app.core import metrics
 from app.core.rate_limit import rate_limit
 from sqlalchemy.orm import Session
 
@@ -38,7 +41,11 @@ def search(
 ) -> SearchResponse:
     ensure_index_fresh(db, workspace.id)
     index = get_or_create_workspace_index(workspace.id)
+    started = time.perf_counter()
     results, is_phrase = search_workspace(db, index, workspace.id, payload.query, payload.limit)
+    kind = "phrase" if is_phrase else "keyword"
+    metrics.observe("ember_search_seconds", time.perf_counter() - started, {"kind": kind})
+    metrics.inc("ember_searches_total", {"kind": kind, "outcome": "hit" if results else "empty"})
 
     # Record search history regardless of whether it returned results —
     # a zero-result search is still a search worth remembering (e.g. for
@@ -62,7 +69,8 @@ def autocomplete(
 ) -> AutocompleteResponse:
     ensure_index_fresh(db, workspace.id)
     trie = get_or_create_workspace_trie(workspace.id)
-    suggestions = trie.suggest(prefix.lower(), limit=limit)
+    with metrics.timed("ember_autocomplete_seconds"):
+        suggestions = trie.suggest(prefix.lower(), limit=limit)
     return AutocompleteResponse(suggestions=suggestions)
 
 

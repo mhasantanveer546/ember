@@ -24,6 +24,7 @@ from rq import Queue, SimpleWorker  # noqa: E402
 from rq.timeouts import TimerDeathPenalty  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
+from app.core.logging_config import configure_logging, init_error_tracking  # noqa: E402
 from app.core.queue import QUEUE_NAME  # noqa: E402
 
 
@@ -32,6 +33,8 @@ class PortableWorker(SimpleWorker):
 
 
 if __name__ == "__main__":
+    configure_logging(settings.log_level, json_logs=settings.log_json if settings.log_json is not None else settings.environment == "production")
+    init_error_tracking(settings.sentry_dsn, settings.environment)
     connection = redis.Redis.from_url(settings.redis_url)
     connection.ping()  # fail fast with a clear error if Redis/Memurai isn't running
     print(f"Ember worker listening on queue '{QUEUE_NAME}' ({settings.redis_url}) ...")

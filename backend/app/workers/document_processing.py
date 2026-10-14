@@ -12,16 +12,21 @@ Run by a real worker process locally with:
 (assuming Redis/Memurai is running and REDIS_URL in .env points to it)
 """
 
+import logging
+import time
 import uuid
 
+from app.core import metrics
 from app.db.session import SessionLocal
 from app.models import Document, DocumentStatus
-from app.services.extraction.extraction_service import extract_text
+from app.services.extraction.extraction_service import ExtractionError, extract_text
 from app.services.search.index_registry import get_or_create_workspace_index
 from app.services.search.rebuild_service import record_incremental_index_update
 from app.services.search.trie_registry import get_or_create_workspace_trie
 from app.services.storage.local_storage import get_storage_service
 from search_engine.tokenizer import tokenize
+
+log = logging.getLogger("ember.worker")
 
 
 def process_document(document_id: str) -> None:
@@ -43,6 +48,8 @@ def process_document(document_id: str) -> None:
             # picking up the job — nothing to do, not an error.
             return
 
+        started = time.perf_counter()
+        stage = "read"
         try:
             document.status = DocumentStatus.PROCESSING
             db.commit()
@@ -51,7 +58,10 @@ def process_document(document_id: str) -> None:
             content = storage.read(document.storage_key)
 
             file_kind = document.filename.rsplit(".", 1)[-1].lower()
-            text = extract_text(file_kind, content)
+            stage = "extract"
+            with metrics.timed("ember_extraction_seconds", {"kind": file_kind}):
+                text = extract_text(file_kind, content)
+            stage = "index"
 
             document.status = DocumentStatus.INDEXING
             db.commit()
@@ -69,6 +79,8 @@ def process_document(document_id: str) -> None:
 
             document.status = DocumentStatus.READY
             db.commit()
+            metrics.observe("ember_indexing_seconds", time.perf_counter() - started)
+            metrics.inc("ember_documents_processed_total", {"outcome": "ready"})
 
             # Keep IndexMetadata's live stats fresh after every upload,
             # not just after an explicit full rebuild (Phase 4.1).
@@ -79,7 +91,16 @@ def process_document(document_id: str) -> None:
                 vocabulary_size=workspace_index.vocabulary_size(),
             )
 
-        except Exception:
+        except Exception as exc:
+            metrics.inc("ember_documents_processed_total", {"outcome": "failed"})
+            metrics.inc("ember_worker_failures_total", {"stage": stage})
+            if isinstance(exc, ExtractionError):
+                metrics.inc("ember_extraction_failures_total", {"kind": document.filename.rsplit(".", 1)[-1].lower()})
+            log.error(
+                "document processing failed",
+                extra={"document_id": document_id, "stage": stage, "error": str(exc)[:300]},
+                exc_info=True,
+            )
             # Deliberately broad: ANY failure at any step (storage read,
             # extraction, tokenization, indexing) should mark the
             # document FAILED rather than leave it stuck in PROCESSING
