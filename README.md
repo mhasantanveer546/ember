@@ -21,7 +21,7 @@ ember/
 
 ## Status
 
-Phases 0–8 complete (search engine, backend, document pipeline, search API, web app, mobile app, security hardening — see `docs/SECURITY.md`). Next: Phase 9 cloud deployment; a free deployment guide is ready in `docs/DEPLOYMENT.md`. To run and test everything locally, see `docs/RUNNING.md`.
+Phases 0–10 built (search engine, backend, document pipeline, search API, web, mobile, security hardening, GCP deploy scripts, CI — see `docs/SECURITY.md`, `docs/GCP.md`). Cloud scripts are untested against a real GCP project. Next: Phase 11 observability. Free deployment guide: `docs/DEPLOYMENT.md`. Local run/test: `docs/RUNNING.md`.
 
 ## Stack decisions
 

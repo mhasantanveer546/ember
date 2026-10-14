@@ -1,0 +1,5 @@
+# Used by deploy.sh: builds backend/Dockerfile with the repo root as context and pushes the image.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "backend/Dockerfile", "-t", "${_IMAGE}", "."]
+images: ["${_IMAGE}"]

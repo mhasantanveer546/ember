@@ -1,0 +1,36 @@
+name: Deploy API (Cloud Run)
+# Runs after CI succeeds on main, or by hand. Does nothing until you set the
+# repository VARIABLES below (Settings -> Secrets and variables -> Actions -> Variables).
+# Auth uses Workload Identity Federation: no service-account key is stored in GitHub.
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: ${{ vars.GCP_PROJECT_ID != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+      CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: ./deploy/gcp/deploy.sh
+      - name: Health check
+        run: |
+          URL="$(gcloud run services describe ember-api --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')"
+          for i in 1 2 3 4 5; do curl -fsS "$URL/health" && exit 0; sleep 5; done; exit 1

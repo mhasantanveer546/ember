@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     run_jobs_inline: bool = False
 
     # --- Storage ---
-    # "local" (development) or "s3" (any S3-compatible service; production).
+    # "local" (development), "s3" (any S3-compatible service) or "gcs" (Google Cloud Storage).
     storage_backend: str = "local"
     local_storage_path: str = "./storage_data"
     s3_endpoint_url: str = ""  # e.g. https://<project>.supabase.co/storage/v1/s3 ; empty = AWS
@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     s3_region: str = ""
     s3_access_key_id: str = ""
     s3_secret_access_key: str = ""
+    # Google Cloud Storage (STORAGE_BACKEND=gcs). Auth is the runtime service
+    # account via Application Default Credentials — no key file or secret needed.
+    gcs_bucket: str = ""
 
     # --- App ---
     environment: str = "development"
@@ -72,8 +75,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _check_production_safety(self) -> "Settings":
-        if self.storage_backend not in ("local", "s3"):
-            raise ValueError("STORAGE_BACKEND must be 'local' or 's3'")
+        if self.storage_backend not in ("local", "s3", "gcs"):
+            raise ValueError("STORAGE_BACKEND must be 'local', 's3' or 'gcs'")
+        if self.storage_backend == "gcs" and not self.gcs_bucket:
+            raise ValueError("STORAGE_BACKEND=gcs requires GCS_BUCKET")
         if self.storage_backend == "s3" and not (
             self.s3_bucket and self.s3_access_key_id and self.s3_secret_access_key
         ):

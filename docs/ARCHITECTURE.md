@@ -86,4 +86,5 @@ RQ expects, no virtualization required.
 - [x] Deployment prep — Dockerfile, render.yaml, S3 storage backend, production config checks, registration switch (docs/DEPLOYMENT.md)
 - [x] Phase 7 — mobile app (Expo): auth, home, search, knowledge + upload, document reader, history, workspaces, profile (docs/MOBILE.md)
 - [x] Phase 8 — security hardening: rate limits, auth fixes, upload bomb/filename checks, headers (docs/SECURITY.md)
-- [ ] Phase 9+ — cloud, CI/CD, observability, AI/RAG
+- [x] Phase 9–10 — GCS storage backend, Cloud Run/Secret Manager scripts, GitHub Actions CI + deploy (docs/GCP.md; scripts not yet run on a real project)
+- [ ] Phase 11+ — observability, AI/RAG, advanced search, production hardening

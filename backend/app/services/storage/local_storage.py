@@ -53,11 +53,15 @@ class LocalStorageService(StorageService):
 def get_storage_service() -> StorageService:
     """
     FastAPI dependency (and general factory) for the active storage backend,
-    chosen by STORAGE_BACKEND: "local" (development) or "s3" (production).
+    chosen by STORAGE_BACKEND: "local" (development), "s3" or "gcs" (production).
     Every caller depends only on the StorageService interface.
     """
     if settings.storage_backend == "s3":
         from app.services.storage.s3_storage import S3StorageService
 
         return S3StorageService()
+    if settings.storage_backend == "gcs":
+        from app.services.storage.gcs_storage import GCSStorageService
+
+        return GCSStorageService()
     return LocalStorageService()

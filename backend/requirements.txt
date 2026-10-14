@@ -5,7 +5,8 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 alembic
-psycopg2-binary
+psycopg2-binary  # postgresql://...
+psycopg[binary]  # postgresql+psycopg://... (Neon's newer connection strings)
 pydantic-settings
 python-dotenv
 httpx  # needed by FastAPI's TestClient
@@ -18,6 +19,7 @@ redis
 
 # --- Phase 3: document pipeline ---
 boto3  # S3-compatible object storage (production file storage)
+google-cloud-storage  # Google Cloud Storage (Phase 9.3)
 pypdf
 python-docx
 rq
